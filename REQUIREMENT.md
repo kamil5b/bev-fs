@@ -1,0 +1,79 @@
+Create CRUD Dashboard:
+
+- Auth:
+    - Login
+    - Register
+    - Forgot Password
+    - Activate Account
+    - Super Admin can CRUD User
+    - JWT Token Based
+
+- CRUD User
+    - Fields:
+        - ID*
+        - Name*
+        - Email*
+        - Password
+        - Role*
+        - Remark
+        - Created At*
+        - Updated At*
+        - Created By*
+        - Updated By*
+        - Deleted At
+        - Deleted By
+    - CRUD Only by Super Admin
+
+- CRUD Customer:
+    - Fields:
+        - ID*
+        - Name*
+        - Phone Number*
+        - Email
+        - Address
+        - Description
+        - Remark
+        - Created At*
+        - Updated At*
+        - Created By*
+        - Updated By*
+        - Deleted At
+        - Deleted By
+    - Create
+    - Detail
+    - Update
+    - Delete
+
+- CRUD Unit Quantity:
+    - Fields:
+        - ID*
+        - Name*
+        - Remark
+        - Created At*
+        - Updated At*
+        - Created By*
+        - Updated By*
+        - Deleted At
+        - Deleted By
+    - Create
+    - Detail
+    - Update
+    - Delete
+
+- CRUD Product:
+    - Fields:
+        - ID*
+        - Name*
+        - Description*
+        - Type*: SELLABLE/ASSET/UTILITY/PLACEHOLDER
+        - Remark
+        - Created At*
+        - Updated At*
+        - Created By*
+        - Updated By*
+        - Deleted At
+        - Deleted By
+    - Create
+    - Detail
+    - Update
+    - Delete
