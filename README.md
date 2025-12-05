@@ -1,13 +1,31 @@
-# Bun Elysia Vue Fullstack — Monolithic Framework Scaffold
+# bev-fs — Monolithic Vue + Elysia Fullstack Framework
 
-This is a complete, production-oriented scaffold for a reusable framework based on Vue + Vite + Bun + Elysia. It includes:
+A complete, production-ready scaffold for a reusable fullstack framework with single-host, single-port deployment. Built with Vue 3, Vite, Bun, and Elysia.
 
-* `packages/framework` — the runtime (server, client, shared helpers)
-* `packages/cli` — a small Bun-powered CLI to scaffold new projects and run unified dev/build commands
-* `template-default` — the starter monolith template that the CLI copies
-* `example` — an example app generated from the template
+**Published packages:**
+- [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v0.1.7+)
+- [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v0.1.13+)
 
-## Quickstart (local dev)
+**Key components:**
+* `packages/framework` — server/client/shared runtime APIs
+* `packages/cli` — CLI for project scaffolding
+* `template-default` — starter template (bundled into CLI)
+* Single Elysia process serves frontend + API on port 3000
+
+## Quickstart
+
+### Use the published CLI (recommended)
+
+```bash
+npx create-bev-fs@latest my-project
+cd my-project
+bun install
+bun run dev
+```
+
+Then open http://localhost:5173 (Vite dev) or http://localhost:3000 (server with built assets).
+
+### Local development (from this repo)
 
 1. Bootstrap dependencies:
 
@@ -15,24 +33,19 @@ This is a complete, production-oriented scaffold for a reusable framework based 
    bun install
    ```
 
-2. Build the framework packages (optional for development):
+2. Build both packages:
 
    ```bash
-   bun run --cwd packages/framework build
-   bun run --cwd packages/cli build
+   cd packages/framework && bun run build
+   cd ../cli && bun run build
+   cd ../..
    ```
 
-3. Scaffold an example project using the CLI:
+3. Scaffold a project from local CLI:
 
    ```bash
-   bun run --cwd packages/cli build
-   node packages/cli/dist/index.js create example-app
-   ```
-
-4. Enter the generated app, install, and run dev:
-
-   ```bash
-   cd example-app
+   node packages/cli/dist/index.js create my-project
+   cd my-project
    bun install
    bun run dev
    ```
@@ -43,56 +56,29 @@ This is a complete, production-oriented scaffold for a reusable framework based 
 
 2. Users can then `bun add @bun-elysia-vue-fs/runtime` and your CLI will scaffold projects that import it.
 
-## Project Structure
+## Project Architecture
 
+**Single-host, single-port deployment:**
+- Elysia server on **port 3000** (configurable via `PORT` env var)
+- Serves static Vue app + API routes from the same process
+- Auto-discovers API handlers from `src/server/api/`
+- SPA fallback: unknown routes return `index.html` for Vue Router client-side routing
+
+**Development mode:** `bun run dev` runs Vite (port 5173) + Elysia (port 3000) concurrently  
+**Production mode:** `bun run build && bun start` → single Bun process on port 3000
+
+## Publishing Updates
+
+To update published packages:
+
+```bash
+# Update framework
+cd packages/framework
+bun run build
+bun publish
+
+# Update CLI (includes bundled template)
+cd ../cli
+bun run build
+bun publish
 ```
-bun-elysia-vue-fs-root/
-├─ package.json
-├─ bunfig.toml
-├─ tsconfig.json
-├─ README.md
-├─ packages/
-│  ├─ framework/
-│  │  ├─ package.json
-│  │  ├─ tsconfig.json
-│  │  └─ src/
-│  │     ├─ index.ts
-│  │     ├─ server/
-│  │     │  └─ createServer.ts
-│  │     ├─ client/
-│  │     │  └─ createApp.ts
-│  │     └─ shared/
-│  │        ├─ createRoute.ts
-│  │        └─ types.ts
-│  └─ cli/
-│     ├─ package.json
-│     └─ src/
-│        └─ index.ts
-└─ template-default/
-   ├─ package.json
-   ├─ vite.config.ts
-   ├─ bunfig.toml
-   └─ src/
-      ├─ app/
-      │  ├─ main.ts
-      │  ├─ router.ts
-      │  └─ pages/
-      │     └─ index.vue
-      ├─ server/
-      │  ├─ index.ts
-      │  └─ api/
-      │     └─ users.ts
-      ├─ routes/
-      │  └─ index.ts
-      └─ types/
-         └─ User.ts
-```
-
-## Notes & next steps
-
-- This scaffold is intentionally pragmatic and minimal. It provides the core pieces you need to iterate.
-- Recommended improvements:
-  1. Add a typed API client generator using route schemas
-  2. Add plugin support to the runtime (middleware, hooks)
-  3. Improve CLI `dev` to spawn child processes (vite + server) and proxy HMR
-  4. Add tests and CI (GitHub Actions) for packaging and releases

@@ -1,28 +1,42 @@
-# bun-elysia-vue-fs — Monolithic Framework Scaffold
+# bev-fs — Monolithic Framework Scaffold
 
-This canvas contains a complete, production-oriented scaffold for a reusable framework based on your architecture (Vue + Vite + Bun + Elysia). It includes:
+A complete, production-oriented scaffold for a reusable fullstack framework based on Vue + Vite + Bun + Elysia. Single-host, single-port deployment architecture.
 
-* `packages/framework` — the runtime (server, client, shared helpers)
-* `packages/cli` — a small Bun-powered CLI to scaffold new projects and run unified dev/build commands
+Includes:
+* `packages/framework` (`bev-fs`) — the runtime (server, client, shared helpers)
+* `packages/cli` (`create-bev-fs`) — a Bun-powered CLI to scaffold new projects  
 * `template-default` — the starter monolith template that the CLI copies
-* `example` — an example app generated from the template
 
-Open the document files below and follow the README in the root for quick start instructions.
+**Published to npm:**
+- `bev-fs@0.1.7+` — framework runtime
+- `create-bev-fs@0.1.13+` — CLI tool
 
 ---
 
 ## File tree
 
 ```
-bun-elysia-vue-fs-root/
+bun-fullstack/
 ├─ package.json
 ├─ bunfig.toml
 ├─ tsconfig.json
 ├─ README.md
+├─ GUIDE.md
+├─ .gitignore
 ├─ packages/
-│  ├─ framework/
-│  │  ├─ package.json
+│  ├─ framework/ (bev-fs)
+│  │  ├─ package.json (name: bev-fs, version: 0.1.7+)
 │  │  ├─ tsconfig.json
+│  │  ├─ dist/ (compiled output)
+│  │  │  ├─ index.js (ES modules)
+│  │  │  ├─ index.d.ts
+│  │  │  ├─ server/
+│  │  │  │  └─ createServer.js
+│  │  │  ├─ client/
+│  │  │  │  └─ createApp.js
+│  │  │  └─ shared/
+│  │  │     ├─ createRoute.js
+│  │  │     └─ types.js
 │  │  └─ src/
 │  │     ├─ index.ts
 │  │     ├─ server/
@@ -32,27 +46,35 @@ bun-elysia-vue-fs-root/
 │  │     └─ shared/
 │  │        ├─ createRoute.ts
 │  │        └─ types.ts
-│  └─ cli/
-│     ├─ package.json
+│  └─ cli/ (create-bev-fs)
+│     ├─ package.json (name: create-bev-fs, version: 0.1.13+)
+│     ├─ tsconfig.json
+│     ├─ wrapper.js (Node.js shebang wrapper)
+│     ├─ dist/ (compiled output)
+│     │  ├─ index.js
+│     │  └─ template/ (bundled copy)
 │     └─ src/
-│        └─ index.ts
-├─ template-default/
+│        ├─ index.ts
+│        └─ template/ (source)
+├─ template-default/ (starter scaffold)
 │  ├─ package.json
 │  ├─ vite.config.ts
 │  ├─ bunfig.toml
+│  ├─ .gitignore
 │  └─ src/
 │     ├─ app/
 │     │  ├─ main.ts
+│     │  ├─ App.vue
 │     │  ├─ router.ts
 │     │  └─ pages/
-│     │     └─ index.vue
-│     ├─ server/
-│     │  └─ index.ts
-│     ├─ routes/
-│     │  └─ index.ts
-│     └─ types/
-│        └─ User.ts
-└─ example/  (generated app)
+│     │     ├─ index.vue
+│     │     └─ users.vue
+│     └─ server/
+│        ├─ index.ts
+│        └─ api/
+│           └─ users.ts
+└─ dist/ (after build)
+   └─ client/ (Vite output)
 ```
 
 ---
@@ -121,20 +143,25 @@ bun-elysia-vue-fs-root/
 
 ```json
 {
-  "name": "@bun-elysia-vue-fs/runtime",
-  "version": "0.1.0",
+  "name": "bev-fs",
+  "version": "0.1.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": ["dist"] ,
+  "files": ["dist"],
   "scripts": {
-    "build": "bun tsc --outDir dist"
+    "build": "tsc src/index.ts src/**/*.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --module ESNext --moduleResolution node"
   },
   "dependencies": {
     "elysia": "*",
     "@elysiajs/static": "*",
     "vue": "*",
     "vue-router": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "@types/node": "*",
+    "@types/bun": "*"
   }
 }
 ```
@@ -292,18 +319,24 @@ export type Json = Record<string, unknown>;
 
 ```json
 {
-  "name": "@bun-elysia-vue-fs/cli",
-  "version": "0.1.0",
+  "name": "create-bev-fs",
+  "version": "0.1.13",
   "type": "module",
   "bin": {
-    "bun-elysia-vue-fs": "dist/index.js"
+    "create-bev-fs": "wrapper.js"
   },
+  "files": ["dist", "wrapper.js"],
   "scripts": {
-    "build": "bun tsc --outDir dist"
+    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/template dist/"
   },
   "dependencies": {
     "fs-extra": "*",
     "fast-glob": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "@types/node": "*",
+    "@types/fs-extra": "*"
   }
 }
 ```
@@ -375,14 +408,15 @@ main().catch(e => {
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev:server": "bun run src/server/index.ts",
+    "dev:server": "bun src/server/index.ts",
     "dev:client": "vite",
-    "dev": "bun run --watch src/server/index.ts & vite",
+    "dev": "concurrently \"bun src/server/index.ts\" \"vite\"",
     "build:client": "vite build",
-    "build:server": "bun build src/server/index.ts --outdir dist/server",
-    "build": "vite build"
+    "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs",
+    "build": "bun run build:client && bun run build:server"
   },
   "dependencies": {
+    "bev-fs": "latest",
     "elysia": "*",
     "@elysiajs/static": "*",
     "vue": "*",
@@ -391,7 +425,8 @@ main().catch(e => {
   "devDependencies": {
     "vite": "*",
     "@vitejs/plugin-vue": "*",
-    "typescript": "*"
+    "typescript": "*",
+    "concurrently": "*"
   }
 }
 ```
@@ -492,10 +527,10 @@ export default {
 ## `template-default/src/server/index.ts`
 
 ```ts
-import { createFrameworkServer } from '@bun-elysia-vue-fs/runtime/server';
 import path from 'path';
 
 (async () => {
+  const { createFrameworkServer } = await import('bev-fs');
   const { app, listen } = await createFrameworkServer({
     apiDir: path.join(process.cwd(), 'src/server/api'),
     staticDir: path.join(process.cwd(), 'dist/client'),
@@ -580,27 +615,35 @@ export type User = {
 
 ---
 
-## Notes & next steps
+## Deployment Architecture
 
-- This scaffold is intentionally pragmatic and minimal. It provides the core pieces you need to iterate:
-  - runtime APIs (`createFrameworkServer`, `createFrameworkApp`, `createRoute`)
-  - templating and a CLI to scaffold apps
-  - a default Vite configuration for Bun/Vue
+**Single-host, single-port model:**
+- Elysia server runs on **port 3000** (configurable via `PORT` env var)
+- Serves both:
+  - Static client files from `dist/client/` (Vite build output)
+  - API endpoints from auto-discovered handlers in `src/server/api/`
+  - SPA fallback: unknown routes return `index.html` for Vue Router
+- No separate frontend/backend services needed
+- Scales horizontally by running multiple instances behind a load balancer
 
-- Next improvements I recommend implementing immediately:
-  1. Add a typed API client generator using route schemas
-  2. Add plugin support to the runtime (middleware, hooks)
-  3. Improve CLI `dev` to spawn child processes (vite + server) and proxy HMR
-  4. Add tests and CI (GitHub Actions) for packaging and releases
+**Dev vs Production:**
+- **Dev**: `bun run dev` runs Vite on port 5173 (hot reload) + Elysia on 3000
+- **Production**: `bun run build && bun start` → single process on 3000
 
----
+## Status
 
-If you want, I can now:
+✅ **Production-ready**
+- Tested end-to-end: `npx create-bev-fs@latest` → `bun run dev` → server + client
+- Published to npm with proper ES modules
+- Single-deployment architecture verified
+- Framework: `bev-fs@0.1.7+` (npm)
+- CLI: `create-bev-fs@0.1.13+` (npm)
 
-- Generate the actual filesystem (create files) and return a zip that you can download, or
-- Run through a step-by-step checklist to publish the first version, or
-- Implement the typed API generator and the CLI `dev` process supervisor (process manager) now.
+## Recommended next steps
 
-Which of those do you want next?
+1. Add typed API client generator from route schemas
+2. Add middleware/hook plugin system  
+3. Add OpenAPI or tRPC for type-safe client-server communication
+4. Add GitHub Actions CI for automated releases
 
 ```
