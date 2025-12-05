@@ -1,0 +1,14 @@
+{
+  "name": "client",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": { "vue": "latest", "vue-router": "latest" },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "vite": "latest",
+    "typescript": "latest"
+  }
+}
