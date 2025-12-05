@@ -14,7 +14,6 @@ You can paste these files into a fresh repo and run it.
 ---
 
 # Project layout (what you’ll create)
-
 ```
 bun-fullstack/
 ├─ package.json
@@ -23,23 +22,19 @@ bun-fullstack/
 ├─ docker-compose.yml
 ├─ .env.example
 ├─ public/                       # built client files after build
-├─ shared/
-│  ├─ enums/
-│  │   └─ user.enums.ts
-│  ├─ models/
-│  │   └─ user.model.ts
-│  ├─ response-envelope.ts
-│  ├─ requests/
-│  │   └─ users/
-│  │       ├─ users.list.request.ts
-│  │       ├─ users.get.request.ts
-│  │       └─ users.create.request.ts
-│  └─ responses/
-│      └─ users/
-│          ├─ users.list.response.ts
-│          ├─ users.get.response.ts
-│          └─ users.create.response.ts
 ├─ src/
+│  ├─ shared/
+│  │   ├─ response-envelope.ts
+│  │   ├─ users/
+│  │   │   ├─ request.users.ts
+│  │   │   ├─ response.users.ts
+│  │   │   ├─ enum.users.ts
+│  │   │   └─ model.users.ts
+│  │   └─ <domain>/
+│  │       ├─ request.<domain>.ts
+│  │       ├─ response.<domain>.ts
+│  │       ├─ enum.<domain>.ts
+│  │       └─ model.<domain>.ts
 │  ├─ server/
 │  │   ├─ index.ts
 │  │   ├─ routes/users.routes.ts
@@ -62,9 +57,25 @@ bun-fullstack/
 │          ├─ app/
 │          │   ├─ App.vue
 │          │   └─ router.ts
-│          ├─ components/ui/Button.vue
-│          ├─ components/ui/Card.vue
-│          └─ domains/users/...
+│          ├─ api/                    # API client wrappers
+│          ├─ assets/                 # Static files
+│          ├─ components/
+│          │   ├─ base/               # Presentational components (Base*)
+│          │   │   ├─ Button.vue
+│          │   │   ├─ Card.vue
+│          │   │   └─ Input.vue
+│          │   └─ feature/            # Feature-specific components
+│          │       └─ UserProfile/
+│          ├─ composables/            # Reusable logic (use*)
+│          │   └─ useUsers.ts
+│          ├─ layouts/                # Page layouts
+│          │   ├─ DefaultLayout.vue
+│          │   └─ AuthLayout.vue
+│          ├─ stores/                 # Pinia stores
+│          │   └─ user.ts
+│          └─ views/                  # Router entry points (Pages)
+│              ├─ HomeView.vue
+│              └─ UserListView.vue
 ├─ scripts/
 │  └─ dev.sh
 └─ Dockerfile
@@ -159,7 +170,7 @@ export interface BaseResponse<TData, TRequest = any> {
 }
 ```
 
-### `shared/enums/user.enums.ts`
+### `shared/users/enum.users.ts`
 
 ```ts
 export enum UserRole {
@@ -168,10 +179,10 @@ export enum UserRole {
 }
 ```
 
-### `shared/models/user.model.ts`
+### `shared/users/model.users.ts`
 
 ```ts
-import type { UserRole } from "../enums/user.enums";
+import type { UserRole } from "./enum.users";
 
 export interface User {
   id: number;
@@ -180,11 +191,11 @@ export interface User {
 }
 ```
 
-#### Requests (one file per endpoint)
-
-`shared/requests/users/users.list.request.ts`
+### `shared/users/request.users.ts`
 
 ```ts
+import type { UserRole } from "./enum.users";
+
 export interface UsersListRequest {
   page?: number;           // 1-based
   perPage?: number;
@@ -193,20 +204,10 @@ export interface UsersListRequest {
   q?: string;              // search query against name
   role?: string;           // filter role
 }
-```
 
-`shared/requests/users/users.get.request.ts`
-
-```ts
 export interface UsersGetRequest {
   id: number;
 }
-```
-
-`shared/requests/users/users.create.request.ts`
-
-```ts
-import type { UserRole } from "../../enums/user.enums";
 
 export interface UsersCreateRequest {
   name: string;
@@ -214,14 +215,12 @@ export interface UsersCreateRequest {
 }
 ```
 
-#### Responses (enveloped; one file per endpoint)
-
-`shared/responses/users/users.list.response.ts`
+### `shared/users/response.users.ts`
 
 ```ts
-import type { BaseResponse } from "../../response-envelope";
-import type { UsersListRequest } from "../../requests/users/users.list.request";
-import type { User } from "../../models/user.model";
+import type { BaseResponse } from "../response-envelope";
+import type { User } from "./model.users";
+import type { UsersListRequest, UsersGetRequest, UsersCreateRequest } from "./request.users";
 
 export interface ListMeta {
   total: number;
@@ -231,24 +230,8 @@ export interface ListMeta {
 }
 
 export type UsersListResponse = BaseResponse<{ items: User[]; meta: ListMeta }, UsersListRequest>;
-```
-
-`shared/responses/users/users.get.response.ts`
-
-```ts
-import type { BaseResponse } from "../../response-envelope";
-import type { UsersGetRequest } from "../../requests/users/users.get.request";
-import type { User } from "../../models/user.model";
 
 export type UsersGetResponse = BaseResponse<User, UsersGetRequest>;
-```
-
-`shared/responses/users/users.create.response.ts`
-
-```ts
-import type { BaseResponse } from "../../response-envelope";
-import type { UsersCreateRequest } from "../../requests/users/users.create.request";
-import type { User } from "../../models/user.model";
 
 export type UsersCreateResponse = BaseResponse<User, UsersCreateRequest>;
 ```
@@ -303,9 +286,8 @@ SELECT 2, 'Bob', 'USER' WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 2);
 
 ```ts
 import { pg } from "../db/pg";
-import type { User } from "@shared/models/user.model";
-import type { UsersListRequest } from "@shared/requests/users/users.list.request";
-import type { UsersCreateRequest } from "@shared/requests/users/users.create.request";
+import type { User } from "@shared/users/model.users";
+import type { UsersListRequest, UsersCreateRequest } from "@shared/users/request.users";
 
 function buildWhere(params: UsersListRequest) {
   const clauses: string[] = [];
@@ -372,8 +354,7 @@ export const usersRepository = {
 
 ```ts
 import { usersRepository } from "../repository/users.repository";
-import type { UsersListRequest } from "@shared/requests/users/users.list.request";
-import type { UsersCreateRequest } from "@shared/requests/users/users.create.request";
+import type { UsersListRequest, UsersCreateRequest } from "@shared/users/request.users";
 
 export const usersService = {
   async list(params: UsersListRequest) {
@@ -433,9 +414,9 @@ export function fail<TReq>(err: unknown, request: TReq): BaseResponse<null, TReq
 ```ts
 import { usersService } from "../service/users.service";
 import { ok, fail } from "../utils/response";
-import type { UsersListRequest } from "@shared/requests/users/users.list.request";
-import type { UsersGetRequest } from "@shared/requests/users/users.get.request";
-import type { UsersCreateRequest } from "@shared/requests/users/users.create.request";
+import type { UsersListRequest } from "@shared/users/request.users";
+import type { UsersGetRequest } from "@shared/users/request.users";
+import type { UsersCreateRequest } from "@shared/users/request.users";
 
 export const usersController = {
   async list(ctx: any) {
@@ -530,9 +511,27 @@ console.log(`🟢 Server running on http://localhost:${PORT}`);
 
 ---
 
-# 9 — Client (Vue + Tailwind) — uses same shared contracts
+# 9 — Client (Vue + Tailwind) — Scalable Architecture
+
+The client follows a **responsibility-driven architecture** that scales with your application.
 
 Install dependencies for client (inside `src/client`): `bun add vue @vitejs/plugin-vue vite tailwindcss postcss autoprefixer`
+
+## 9.1 — Architecture Overview
+
+Your Vue client is organized into logical layers:
+
+- **`components/base`** — Reusable presentational components (e.g., `BaseButton.vue`, `BaseCard.vue`) with no business logic
+- **`components/feature`** — Complex components that compose base components and use composables for business logic
+- **`composables`** — Reusable stateful logic (e.g., `useUsers.ts` for pagination, filtering, sorting)
+- **`stores`** — Global state (Pinia) for data needed across multiple routes
+- **`views`** — Router entry points that orchestrate layouts and feature components
+- **`layouts`** — Shared page templates (header, footer, sidebar)
+This structure ensures:
+✓ Components are small and reusable
+✓ Business logic is separated from presentation
+✓ Code is easy to test and maintain
+✓ Types are shared between backend and frontend
 
 ### `src/client/package.json`
 
@@ -608,37 +607,35 @@ export default {
 };
 ```
 
----
+## 9.2 — Base Components (Presentational Layer)
 
-## Client domain types re-export shared contracts
+Base components are **dumb UI blocks** with no business logic. Prefix them with `Base`.
 
-`src/client/src/domains/users/types.ts`
+`src/client/src/components/base/Button.vue`
 
-```ts
-export * from "@shared/requests/users/users.list.request";
-export * from "@shared/requests/users/users.get.request";
-export * from "@shared/requests/users/users.create.request";
-
-export * from "@shared/responses/users/users.list.response";
-export * from "@shared/responses/users/users.get.response";
-export * from "@shared/responses/users/users.create.response";
-
-export * from "@shared/models/user.model";
-export * from "@shared/enums/user.enums";
+```vue
+<template>
+  <button v-bind="$attrs" class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
+    <slot />
+  </button>
+</template>
 ```
 
----
+`src/client/src/components/base/Card.vue`
 
-## Client API (query-string builder + uses enveloped responses)
+```vue
+<template>
+  <div class="p-4 border rounded bg-white shadow-sm"><slot/></div>
+</template>
+```
 
-`src/client/src/domains/users/api/users.api.ts`
+## 9.3 — API Client
+
+### API Client: `src/client/src/api/users.api.ts`
 
 ```ts
-import type {
-  UsersListRequest, UsersListResponse,
-  UsersGetRequest, UsersGetResponse,
-  UsersCreateRequest, UsersCreateResponse
-} from "../types";
+import type { UsersListRequest, UsersGetRequest, UsersCreateRequest } from "@shared/users/request.users";
+import type { UsersListResponse, UsersGetResponse, UsersCreateResponse } from "@shared/users/response.users";
 
 function qs(obj: Record<string, any>) {
   const p = Object.entries(obj)
@@ -671,16 +668,16 @@ export const usersApi = {
 };
 ```
 
----
+## 9.4 — Composables (Reusable Stateful Logic)
 
-## Client composable (paging/sort/filter wrapper)
+Composables handle all business logic and state management. They're consumed by feature components and views.
 
-`src/client/src/domains/users/composables/useUsers.ts`
+### Composable: `src/client/src/composables/useUsers.ts`
 
 ```ts
 import { ref } from "vue";
-import { usersApi } from "../api/users.api";
-import type { UsersListRequest } from "../types";
+import { usersApi } from "@/api/users.api";
+import type { UsersListRequest } from "@shared/users/request.users";
 
 export function useUsers() {
   const items = ref([]);
@@ -726,29 +723,114 @@ export function useUsers() {
 }
 ```
 
+## 9.5 — Feature Components (Business Logic)
+
+Feature components use composables and compose base components into reusable domain-specific UI blocks.
+
+`src/client/src/components/feature/UserList.vue`
+
+```vue
+<template>
+  <BaseCard>
+    <h2 class="mb-4 text-lg font-bold">Users</h2>
+    <div v-if="loading" class="text-gray-500">Loading...</div>
+    <div v-else-if="error" class="text-red-600">{{ error }}</div>
+    <div v-else>
+      <table class="w-full text-sm">
+        <thead><tr><th class="text-left">Name</th><th class="text-left">Role</th></tr></thead>
+        <tbody>
+          <tr v-for="user of items" :key="user.id">
+            <td>{{ user.name }}</td>
+            <td>{{ user.role }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="mt-4 flex gap-2">
+        <BaseButton @click="load" :disabled="loading">Refresh</BaseButton>
+      </div>
+    </div>
+  </BaseCard>
+</template>
+
+<script setup lang="ts">
+import { useUsers } from "@/composables/useUsers";
+import BaseCard from "@/components/base/Card.vue";
+import BaseButton from "@/components/base/Button.vue";
+
+const { items, loading, error, load } = useUsers();
+load();
+</script>
+```
+
+## 9.6 — Views (Router Entry Points)
+
+Views are thin orchestrators that compose layouts and feature components. They're tied to routes.
+
+`src/client/src/views/UserListView.vue`
+
+```vue
+<template>
+  <DefaultLayout>
+    <div class="space-y-4">
+      <h1 class="text-3xl font-bold">Users</h1>
+      <UserList />
+    </div>
+  </DefaultLayout>
+</template>
+
+<script setup lang="ts">
+import DefaultLayout from "@/layouts/DefaultLayout.vue";
+import UserList from "@/components/feature/UserList.vue";
+</script>
+```
+
+## 9.7 — Layouts (Shared Page Templates)
+
+Layouts abstract common structure (header, sidebar, footer) across multiple views.
+
+`src/client/src/layouts/DefaultLayout.vue`
+
+```vue
+<template>
+  <div class="flex min-h-screen flex-col">
+    <header class="bg-blue-600 text-white p-4"><h1>My App</h1></header>
+    <main class="flex-1 p-4"><slot /></main>
+    <footer class="bg-gray-200 p-4 text-center">© 2024</footer>
+  </div>
+</template>
+```
+
+## 9.8 — Router Configuration
+
+`src/client/src/app/router.ts`
+
+```ts
+import { createRouter, createWebHistory } from "vue-router";
+import HomeView from "@/views/HomeView.vue";
+import UserListView from "@/views/UserListView.vue";
+
+export const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: "/", component: HomeView },
+    { path: "/users", component: UserListView }
+  ]
+});
+```
+
+## 9.9 — Best Practices Checklist
+
+| Principle | Example |
+| :--- | :--- |
+| **Base components are dumb** | `BaseButton.vue` takes `@click` emit, no logic |
+| **Feature components compose bases** | `UserList.vue` uses `useUsers()` + `BaseCard` |
+| **Composables handle all logic** | `useUsers()` manages pagination, filtering, API calls |
+| **Views are thin** | `UserListView.vue` just passes data to layouts/features |
+| **Types are shared** | Import directly from `@shared` in composables/components |
+| **Use `<script setup>`** | Cleaner Composition API syntax in `.vue` files |
+| **Scope styles locally** | Always use `<style scoped>` in components |
+
 ---
-
-## Minimal UI components (examples)
-
-`src/client/src/components/ui/Button.vue`
-
-```vue
-<template>
-  <button v-bind="$attrs" class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
-    <slot />
-  </button>
-</template>
-```
-
-`src/client/src/components/ui/Card.vue`
-
-```vue
-<template>
-  <div class="p-4 border rounded bg-white shadow-sm"><slot/></div>
-</template>
-```
-
-(Use these in domain pages shown earlier in the previous message.)
 
 ---
 
@@ -852,21 +934,3 @@ volumes:
 
 ---
 
-# 13 — Notes & extensions you can add next
-
-* Add **Zod** validation (server) and compile-time types on FE (Zod + zod-to-ts)
-* Add **authentication** (JWT/cookie) with shared auth request/response contracts
-* Add **search indexes** or full-text search for queries
-* Add **rate limiting**, **CORS**, **logging (pino)**
-* Replace raw SQL with prepared statements, or add query builder if needed (we used parameterized queries `$1`, etc.)
-* Add **migrations** engine (e.g., node-pg-migrate) for production migrations (the sample runs init.sql on startup)
-
----
-
-If you want, I can now:
-
-* Produce **the exact set of files** (zipped or as a GitHub repo layout) so you can paste them straight into a new repo; or
-* Add **Zod validation** for request bodies and show how to return typed validation errors in the same response envelope; or
-* Add **Auth** (register/login) with shared request/response files.
-
-Which one should I do next?
