@@ -1,936 +1,606 @@
-Got it — here’s a fresh, complete, **copy/pasteable** Fullstack Bun monolith guide that:
+# myfw — Monolithic Framework Scaffold
 
-* Uses **PostgreSQL** (via `pg`)
-* Has **shared request files** and **shared response files** (separate)
-* Uses a **response envelope** that includes `requestId`, `timestamp`, `success`, `error`, and `request` echo
-* Implements **pagination + sorting + filtering** for the list endpoint
-* Uses **3-layer backend** (repository → service → controller), **no ORM**, raw SQL queries
-* Frontend is **Vue 3 + Vite + Tailwind**, domain/component based and imports the same shared types (request/response/models/enums)
-* Includes **Dockerfile + docker-compose** (Postgres + app) and development scripts
-* Fully TypeScript
+This canvas contains a complete, production-oriented scaffold for a reusable framework based on your architecture (Vue + Vite + Bun + Elysia). It includes:
 
-You can paste these files into a fresh repo and run it.
+* `packages/framework` — the runtime (server, client, shared helpers)
+* `packages/cli` — a small Bun-powered CLI to scaffold new projects and run unified dev/build commands
+* `template-default` — the starter monolith template that the CLI copies
+* `example` — an example app generated from the template
+
+Open the document files below and follow the README in the root for quick start instructions.
 
 ---
 
-# Project layout (what you’ll create)
+## File tree
+
 ```
-bun-fullstack/
+myfw-root/
 ├─ package.json
 ├─ bunfig.toml
 ├─ tsconfig.json
-├─ docker-compose.yml
-├─ .env.example
-├─ public/                       # built client files after build
-├─ src/
-│  ├─ shared/
-│  │   ├─ response-envelope.ts
-│  │   ├─ users/
-│  │   │   ├─ request.users.ts
-│  │   │   ├─ response.users.ts
-│  │   │   ├─ enum.users.ts
-│  │   │   └─ model.users.ts
-│  │   └─ <domain>/
-│  │       ├─ request.<domain>.ts
-│  │       ├─ response.<domain>.ts
-│  │       ├─ enum.<domain>.ts
-│  │       └─ model.<domain>.ts
-│  ├─ server/
-│  │   ├─ index.ts
-│  │   ├─ routes/users.routes.ts
-│  │   ├─ controller/users.controller.ts
-│  │   ├─ service/users.service.ts
-│  │   ├─ repository/users.repository.ts
-│  │   └─ db/
-│  │       ├─ pg.ts
-│  │       └─ migrations/
-│  │           └─ init.sql
-│  └─ client/
-│      ├─ package.json
-│      ├─ index.html
-│      ├─ vite.config.ts
-│      ├─ tailwind.config.js
-│      ├─ postcss.config.js
-│      └─ src/
-│          ├─ main.ts
-│          ├─ style.css
-│          ├─ app/
-│          │   ├─ App.vue
-│          │   └─ router.ts
-│          ├─ api/                    # API client wrappers
-│          ├─ assets/                 # Static files
-│          ├─ components/
-│          │   ├─ base/               # Presentational components (Base*)
-│          │   │   ├─ Button.vue
-│          │   │   ├─ Card.vue
-│          │   │   └─ Input.vue
-│          │   └─ feature/            # Feature-specific components
-│          │       └─ UserProfile/
-│          ├─ composables/            # Reusable logic (use*)
-│          │   └─ useUsers.ts
-│          ├─ layouts/                # Page layouts
-│          │   ├─ DefaultLayout.vue
-│          │   └─ AuthLayout.vue
-│          ├─ stores/                 # Pinia stores
-│          │   └─ user.ts
-│          └─ views/                  # Router entry points (Pages)
-│              ├─ HomeView.vue
-│              └─ UserListView.vue
-├─ scripts/
-│  └─ dev.sh
-└─ Dockerfile
+├─ README.md
+├─ packages/
+│  ├─ framework/
+│  │  ├─ package.json
+│  │  ├─ tsconfig.json
+│  │  └─ src/
+│  │     ├─ index.ts
+│  │     ├─ server/
+│  │     │  └─ createServer.ts
+│  │     ├─ client/
+│  │     │  └─ createApp.ts
+│  │     └─ shared/
+│  │        ├─ createRoute.ts
+│  │        └─ types.ts
+│  └─ cli/
+│     ├─ package.json
+│     └─ src/
+│        └─ index.ts
+├─ template-default/
+│  ├─ package.json
+│  ├─ vite.config.ts
+│  ├─ bunfig.toml
+│  └─ src/
+│     ├─ app/
+│     │  ├─ main.ts
+│     │  ├─ router.ts
+│     │  └─ pages/
+│     │     └─ index.vue
+│     ├─ server/
+│     │  └─ index.ts
+│     ├─ routes/
+│     │  └─ index.ts
+│     └─ types/
+│        └─ User.ts
+└─ example/  (generated app)
 ```
 
 ---
 
-# 0 — Root config files
+> The sections below contain the actual file contents. Use them to inspect, adapt, or copy into a real repository.
 
-### `package.json` (root)
+---
+
+## Root `package.json`
 
 ```json
 {
-  "name": "bun-fullstack",
+  "name": "myfw-monorepo",
   "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev:server": "bun run src/server/index.ts",
-    "dev:client": "cd src/client && bunx vite",
-    "dev": "bash scripts/dev.sh",
-    "build:client": "cd src/client && bunx vite build && cp -r dist/* ../../public/",
-    "start": "bun run src/server/index.ts"
-  },
-  "dependencies": {
-    "elysia": "latest",
-    "@elysiajs/static": "latest",
-    "pg": "latest"
-  },
-  "devDependencies": {
-    "typescript": "latest"
+    "bootstrap": "bun install",
+    "dev:example": "cd example && bun run dev",
+    "build:example": "cd example && bun run build",
+    "publish:framework": "cd packages/framework && npm publish"
   }
 }
 ```
 
-### `bunfig.toml`
+---
+
+## `bunfig.toml` (root)
 
 ```toml
-[server]
-port = 3000
+# Bun config - keep minimal
+
+[install]
+# configuration if needed
 ```
 
-### `tsconfig.json`
+---
+
+## `tsconfig.json` (root)
 
 ```json
 {
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["shared/*"],
-      "@server/*": ["src/server/*"],
-      "@client/*": ["src/client/src/*"]
-    },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["bun-shim"]
   },
-  "include": ["src", "shared"]
+  "include": ["packages/**/src", "template-default/src", "example/src"]
 }
-```
-
-### `.env.example`
-
-```
-PG_HOST=postgres
-PG_PORT=5432
-PG_DATABASE=app
-PG_USER=postgres
-PG_PASSWORD=postgres
-
-APP_PORT=3000
 ```
 
 ---
 
-# 1 — Shared types (requests, responses, models, envelope)
+## `packages/framework/package.json`
 
-Create `shared/` exactly as below.
-
-### `shared/response-envelope.ts`
-
-```ts
-export interface BaseResponse<TData, TRequest = any> {
-  requestId: string;       // uuid for correlation
-  success: boolean;
-  timestamp: number;       // Date.now()
-  request: TRequest;       // echo of the request
-  data?: TData;            // present on success
-  error?: string;          // present when success === false
-}
-```
-
-### `shared/users/enum.users.ts`
-
-```ts
-export enum UserRole {
-  ADMIN = "ADMIN",
-  USER = "USER"
-}
-```
-
-### `shared/users/model.users.ts`
-
-```ts
-import type { UserRole } from "./enum.users";
-
-export interface User {
-  id: number;
-  name: string;
-  role: UserRole;
-}
-```
-
-### `shared/users/request.users.ts`
-
-```ts
-import type { UserRole } from "./enum.users";
-
-export interface UsersListRequest {
-  page?: number;           // 1-based
-  perPage?: number;
-  sortBy?: string;         // allowed values validated server-side
-  sortOrder?: "asc" | "desc";
-  q?: string;              // search query against name
-  role?: string;           // filter role
-}
-
-export interface UsersGetRequest {
-  id: number;
-}
-
-export interface UsersCreateRequest {
-  name: string;
-  role: UserRole;
-}
-```
-
-### `shared/users/response.users.ts`
-
-```ts
-import type { BaseResponse } from "../response-envelope";
-import type { User } from "./model.users";
-import type { UsersListRequest, UsersGetRequest, UsersCreateRequest } from "./request.users";
-
-export interface ListMeta {
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-export type UsersListResponse = BaseResponse<{ items: User[]; meta: ListMeta }, UsersListRequest>;
-
-export type UsersGetResponse = BaseResponse<User, UsersGetRequest>;
-
-export type UsersCreateResponse = BaseResponse<User, UsersCreateRequest>;
-```
-
----
-
-# 2 — Server: Postgres client + migration
-
-### `src/server/db/pg.ts`
-
-```ts
-import { Client } from "pg";
-
-export const pg = new Client({
-  host: process.env.PG_HOST ?? "localhost",
-  port: Number(process.env.PG_PORT ?? 5432),
-  database: process.env.PG_DATABASE ?? "app",
-  user: process.env.PG_USER ?? "postgres",
-  password: process.env.PG_PASSWORD ?? "postgres"
-});
-
-await pg.connect();
-
-export async function initDb() {
-  const sql = await Bun.file(import.meta.dir + "/migrations/init.sql").text();
-  await pg.query(sql);
-}
-```
-
-### `src/server/db/migrations/init.sql`
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL
-);
-
--- seed sample data if empty
-INSERT INTO users (id, name, role)
-SELECT 1, 'Alice', 'ADMIN' WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
-
-INSERT INTO users (id, name, role)
-SELECT 2, 'Bob', 'USER' WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 2);
-```
-
----
-
-# 3 — Repository (raw SQL) with pagination/sort/filter
-
-### `src/server/repository/users.repository.ts`
-
-```ts
-import { pg } from "../db/pg";
-import type { User } from "@shared/users/model.users";
-import type { UsersListRequest, UsersCreateRequest } from "@shared/users/request.users";
-
-function buildWhere(params: UsersListRequest) {
-  const clauses: string[] = [];
-  const values: any[] = [];
-  let idx = 1;
-
-  if (params.q) {
-    clauses.push(`name ILIKE $${idx++}`);
-    values.push(`%${params.q}%`);
+```json
+{
+  "name": "@myfw/runtime",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": ["dist"] ,
+  "scripts": {
+    "build": "bun tsc --outDir dist"
+  },
+  "dependencies": {
+    "elysia": "*",
+    "@elysiajs/static": "*",
+    "vue": "*",
+    "vue-router": "*"
   }
-
-  if (params.role) {
-    clauses.push(`role = $${idx++}`);
-    values.push(params.role);
-  }
-
-  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  return { where, values };
-}
-
-export const usersRepository = {
-  async findAndCount(params: UsersListRequest) {
-    const page = Math.max(1, params.page ?? 1);
-    const perPage = Math.min(100, Math.max(1, params.perPage ?? 10));
-    const offset = (page - 1) * perPage;
-
-    const allowedSortBy = ["id", "name", "role"];
-    const sortBy = allowedSortBy.includes(params.sortBy ?? "") ? params.sortBy! : "id";
-    const sortOrder = params.sortOrder === "desc" ? "DESC" : "ASC";
-
-    const { where, values } = buildWhere(params);
-
-    const countSQL = `SELECT COUNT(*) AS count FROM users ${where}`;
-    const countRes = await pg.query(countSQL, values);
-    const total = Number(countRes.rows[0]?.count ?? 0);
-
-    const itemsSQL = `SELECT id, name, role FROM users ${where} ORDER BY ${sortBy} ${sortOrder} LIMIT $${values.length+1} OFFSET $${values.length+2}`;
-    const itemsRes = await pg.query(itemsSQL, [...values, perPage, offset]);
-    const items = itemsRes.rows as User[];
-
-    return { items, total, page, perPage };
-  },
-
-  async findById(id: number) {
-    const res = await pg.query("SELECT id, name, role FROM users WHERE id = $1", [id]);
-    return res.rows[0] ?? null;
-  },
-
-  async create(payload: UsersCreateRequest) {
-    const res = await pg.query(
-      "INSERT INTO users (name, role) VALUES ($1, $2) RETURNING id, name, role",
-      [payload.name, payload.role]
-    );
-    return res.rows[0] as User;
-  }
-};
-```
-
----
-
-# 4 — Service layer (simple validation + pass-through)
-
-### `src/server/service/users.service.ts`
-
-```ts
-import { usersRepository } from "../repository/users.repository";
-import type { UsersListRequest, UsersCreateRequest } from "@shared/users/request.users";
-
-export const usersService = {
-  async list(params: UsersListRequest) {
-    // you could add more business rules here
-    return usersRepository.findAndCount(params);
-  },
-
-  async get(id: number) {
-    const user = await usersRepository.findById(id);
-    if (!user) throw new Error("User not found");
-    return user;
-  },
-
-  async create(payload: UsersCreateRequest) {
-    if (!payload.name || payload.name.length < 2) throw new Error("Invalid name");
-    return usersRepository.create(payload);
-  }
-};
-```
-
----
-
-# 5 — Response helper (envelope generator)
-
-### `src/server/utils/response.ts`
-
-```ts
-import type { BaseResponse } from "@shared/response-envelope";
-
-export function ok<TData, TReq>(data: TData, request: TReq): BaseResponse<TData, TReq> {
-  return {
-    requestId: crypto.randomUUID(),
-    success: true,
-    timestamp: Date.now(),
-    request,
-    data
-  };
-}
-
-export function fail<TReq>(err: unknown, request: TReq): BaseResponse<null, TReq> {
-  return {
-    requestId: crypto.randomUUID(),
-    success: false,
-    timestamp: Date.now(),
-    request,
-    error: err instanceof Error ? err.message : String(err)
-  };
 }
 ```
 
 ---
 
-# 6 — Controller using shared requests and enveloped responses
+## `packages/framework/tsconfig.json`
 
-### `src/server/controller/users.controller.ts`
-
-```ts
-import { usersService } from "../service/users.service";
-import { ok, fail } from "../utils/response";
-import type { UsersListRequest } from "@shared/users/request.users";
-import type { UsersGetRequest } from "@shared/users/request.users";
-import type { UsersCreateRequest } from "@shared/users/request.users";
-
-export const usersController = {
-  async list(ctx: any) {
-    const request: UsersListRequest = {
-      page: ctx.query.page ? Number(ctx.query.page) : undefined,
-      perPage: ctx.query.perPage ? Number(ctx.query.perPage) : undefined,
-      sortBy: ctx.query.sortBy,
-      sortOrder: ctx.query.sortOrder as "asc" | "desc" | undefined,
-      q: ctx.query.q,
-      role: ctx.query.role
-    };
-
-    try {
-      const { items, total, page, perPage } = await usersService.list(request);
-      const meta = { total, page, perPage, totalPages: Math.ceil(total / perPage) || 0 };
-      return ok({ items, meta }, request);
-    } catch (err) {
-      return fail(err, request);
-    }
-  },
-
-  async get(ctx: any) {
-    const request: UsersGetRequest = { id: Number(ctx.params.id) };
-    try {
-      const data = await usersService.get(request.id);
-      return ok(data, request);
-    } catch (err) {
-      return fail(err, request);
-    }
-  },
-
-  async create(ctx: any) {
-    const request: UsersCreateRequest = ctx.body;
-    try {
-      const data = await usersService.create(request);
-      return ok(data, request);
-    } catch (err) {
-      return fail(err, request);
-    }
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
   }
-};
+}
 ```
 
 ---
 
-# 7 — Routes
-
-### `src/server/routes/users.routes.ts`
+## `packages/framework/src/index.ts`
 
 ```ts
-import { Elysia } from "elysia";
-import { usersController } from "../controller/users.controller";
-
-export default new Elysia({ prefix: "/users" })
-  .get("/", ctx => usersController.list(ctx))
-  .get("/:id", ctx => usersController.get(ctx))
-  .post("/", ctx => usersController.create(ctx));
+export * from "./server/createServer";
+export * from "./client/createApp";
+export * from "./shared/createRoute";
+export * from "./shared/types";
 ```
 
 ---
 
-# 8 — Server entry
-
-### `src/server/index.ts`
+## `packages/framework/src/server/createServer.ts`
 
 ```ts
 import { Elysia } from "elysia";
 import { staticPlugin } from "@elysiajs/static";
 import path from "path";
-import users from "./routes/users.routes";
-import { initDb } from "./db/pg";
+import fs from "fs";
 
-await initDb();
+export type ServerOptions = {
+  routesDir?: string; // path to shared route defs
+  apiDir?: string; // where api handlers live
+  staticDir?: string; // where built client lives
+  port?: number;
+  env?: "development" | "production";
+};
 
-const app = new Elysia();
+export async function createFrameworkServer(opts: ServerOptions = {}) {
+  const port = opts.port ?? 3000;
+  const staticDir = opts.staticDir ?? path.join(process.cwd(), "dist/client");
+  const apiDir = opts.apiDir ?? path.join(process.cwd(), "src/server/api");
 
-app.use(
-  staticPlugin({
-    assets: path.join(import.meta.dir, "../../public"),
-    indexHTML: true
-  })
-);
+  const app = new Elysia();
 
-// mount API under /api
-app.group("/api", api => api.use(users));
+  // Static asset serving
+  if (fs.existsSync(staticDir)) {
+    app.use(staticPlugin({ assets: staticDir, prefix: "/" }));
+  }
 
-const PORT = Number(process.env.APP_PORT ?? 3000);
-app.listen(PORT);
+  // Auto-register API handlers: export functions named by HTTP verb or default to handler
+  try {
+    if (fs.existsSync(apiDir)) {
+      const files = fs.readdirSync(apiDir).filter(f => f.endsWith(".ts") || f.endsWith(".js"));
+      for (const file of files) {
+        const full = path.join(apiDir, file);
+        // dynamic import
+        // note: Bun supports file:// import; adjust for environment
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const mod = await import(full);
+        if (mod.default) {
+          // mount at /api/<name>
+          const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
+          app.get(route, mod.default as any);
+        }
+        // allow named exports: get/post/put/delete
+        ["get", "post", "put", "delete"].forEach((verb) => {
+          if (mod[verb]) {
+            const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
+            // @ts-ignore
+            app[verb](route, mod[verb]);
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to auto-register api handlers", e);
+  }
 
-console.log(`🟢 Server running on http://localhost:${PORT}`);
+  // SPA fallback for client-side routing
+  app.get("*", (c) => {
+    const index = path.join(staticDir, "index.html");
+    if (fs.existsSync(index)) return Bun.file(index);
+    return { message: "Server running" };
+  });
+
+  return {
+    app,
+    listen: (p = port) => app.listen(p)
+  };
+}
 ```
 
 ---
 
-# 9 — Client (Vue + Tailwind) — Scalable Architecture
+## `packages/framework/src/client/createApp.ts`
 
-The client follows a **responsibility-driven architecture** that scales with your application.
+```ts
+import { createApp as _createApp } from "vue";
+import { createRouter, createWebHistory } from "vue-router";
 
-Install dependencies for client (inside `src/client`): `bun add vue @vitejs/plugin-vue vite tailwindcss postcss autoprefixer`
+export type ClientOptions = {
+  routes?: any[]; // vue-router routes
+  historyMode?: boolean;
+};
 
-## 9.1 — Architecture Overview
+export function createFrameworkApp(rootComponent: any, opts: ClientOptions = {}) {
+  const app = _createApp(rootComponent);
 
-Your Vue client is organized into logical layers:
+  const routes = opts.routes ?? [];
+  const router = createRouter({
+    history: createWebHistory(),
+    routes
+  });
 
-- **`components/base`** — Reusable presentational components (e.g., `BaseButton.vue`, `BaseCard.vue`) with no business logic
-- **`components/feature`** — Complex components that compose base components and use composables for business logic
-- **`composables`** — Reusable stateful logic (e.g., `useUsers.ts` for pagination, filtering, sorting)
-- **`stores`** — Global state (Pinia) for data needed across multiple routes
-- **`views`** — Router entry points that orchestrate layouts and feature components
-- **`layouts`** — Shared page templates (header, footer, sidebar)
-This structure ensures:
-✓ Components are small and reusable
-✓ Business logic is separated from presentation
-✓ Code is easy to test and maintain
-✓ Types are shared between backend and frontend
+  app.use(router);
 
-### `src/client/package.json`
+  return { app, router };
+}
+```
+
+---
+
+## `packages/framework/src/shared/createRoute.ts`
+
+```ts
+export const createRoute = <T extends string>(path: T) => ({
+  path,
+  api(pathSuffix = "") {
+    return `/api${path}${pathSuffix}`;
+  }
+});
+```
+
+---
+
+## `packages/framework/src/shared/types.ts`
+
+```ts
+export type Json = Record<string, unknown>;
+```
+
+---
+
+## `packages/cli/package.json`
 
 ```json
 {
-  "name": "client",
-  "private": true,
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+  "name": "@myfw/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "myfw": "dist/index.js"
   },
-  "dependencies": { "vue": "^3.4.0" },
-  "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.0",
-    "vite": "^5.0.0",
-    "typescript": "^5.0.0",
-    "tailwindcss": "^4.0.0",
-    "postcss": "^8.0.0",
-    "autoprefixer": "^10.0.0"
+  "scripts": {
+    "build": "bun tsc --outDir dist"
+  },
+  "dependencies": {
+    "fs-extra": "*",
+    "fast-glob": "*"
   }
 }
 ```
 
-### `src/client/vite.config.ts`
+---
+
+## `packages/cli/src/index.ts`
+
+```ts
+#!/usr/bin/env bun
+
+import fs from "fs";
+import fse from "fs-extra";
+import path from "path";
+
+const root = path.resolve(process.cwd());
+const templateDir = path.join(root, "../..", "template-default");
+
+async function createProject(name: string) {
+  const dest = path.join(process.cwd(), name);
+  if (fs.existsSync(dest)) throw new Error("Destination exists");
+  await fse.copy(templateDir, dest);
+  console.log("Project scaffolded to", dest);
+  console.log("Run: cd %s && bun install && bun run dev", name);
+}
+
+async function runDev() {
+  // start unified dev: run vite in client and Bun server in watch
+  console.log("Starting unified dev (you can also run client/server separately)");
+  // simple implementation: just forward to project scripts
+}
+
+async function main(argv = process.argv.slice(2)) {
+  const cmd = argv[0];
+  if (!cmd || cmd === "help") {
+    console.log("myfw create <name> — scaffold a new project");
+    console.log("myfw dev — run dev (in project root)");
+    process.exit(0);
+  }
+
+  if (cmd === "create") {
+    const name = argv[1];
+    if (!name) throw new Error("missing project name");
+    await createProject(name);
+    return;
+  }
+
+  if (cmd === "dev") {
+    await runDev();
+    return;
+  }
+
+  console.log("unknown command", cmd);
+}
+
+main().catch(e => {
+  console.error(e);
+  process.exit(1);
+});
+```
+
+---
+
+## `template-default/package.json`
+
+```json
+{
+  "name": "myfw-starter",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:server": "bun run src/server/index.ts",
+    "dev:client": "vite",
+    "dev": "bun run --watch src/server/index.ts & vite",
+    "build:client": "vite build",
+    "build:server": "bun build src/server/index.ts --outdir dist/server",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "elysia": "*",
+    "@elysiajs/static": "*",
+    "vue": "*",
+    "vue-router": "*"
+  },
+  "devDependencies": {
+    "vite": "*",
+    "@vitejs/plugin-vue": "*",
+    "typescript": "*"
+  }
+}
+```
+
+---
+
+## `template-default/vite.config.ts`
 
 ```ts
 import { defineConfig } from "vite";
-import vue from "@vitejs/plugin-vue";
-import path from "path";
+import vue from '@vitejs/plugin-vue';
+import path from 'path';
 
 export default defineConfig({
   plugins: [vue()],
-  resolve: { alias: { "@": path.resolve(__dirname, "src") } },
-  server: { proxy: { "/api": "http://localhost:3000" } }
+  root: 'src/app',
+  build: {
+    outDir: '../../dist/client',
+    emptyOutDir: true
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(process.cwd(), 'src')
+    }
+  }
 });
 ```
 
-### `src/client/index.html`
+---
 
-```html
-<!doctype html>
-<html>
-  <head><meta charset="utf-8" /><title>Bun Fullstack</title></head>
-  <body><div id="app"></div><script type="module" src="/src/main.ts"></script></body>
-</html>
+## `template-default/bunfig.toml`
+
+```toml
+[watch]
+# configure watch if needed
 ```
 
-### `src/client/src/main.ts`
+---
+
+## `template-default/src/app/main.ts`
 
 ```ts
-import { createApp } from "vue";
-import App from "./app/App.vue";
-import { router } from "./app/router";
-import "../style.css";
+import { createApp } from 'vue';
+import App from './App.vue';
+import { router } from './router';
 
-createApp(App).use(router).mount("#app");
+createApp(App).use(router).mount('#app');
 ```
 
-### `src/client/src/style.css`
+---
 
-```css
-@tailwind base; @tailwind components; @tailwind utilities;
-body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto; }
-```
-
-### `src/client/tailwind.config.js`
-
-```js
-export default {
-  content: ["./index.html", "./src/**/*.{vue,ts,js}"],
-  theme: { extend: {} },
-  plugins: []
-};
-```
-
-## 9.2 — Base Components (Presentational Layer)
-
-Base components are **dumb UI blocks** with no business logic. Prefix them with `Base`.
-
-`src/client/src/components/base/Button.vue`
-
-```vue
-<template>
-  <button v-bind="$attrs" class="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
-    <slot />
-  </button>
-</template>
-```
-
-`src/client/src/components/base/Card.vue`
-
-```vue
-<template>
-  <div class="p-4 border rounded bg-white shadow-sm"><slot/></div>
-</template>
-```
-
-## 9.3 — API Client
-
-### API Client: `src/client/src/api/users.api.ts`
+## `template-default/src/app/router.ts`
 
 ```ts
-import type { UsersListRequest, UsersGetRequest, UsersCreateRequest } from "@shared/users/request.users";
-import type { UsersListResponse, UsersGetResponse, UsersCreateResponse } from "@shared/users/response.users";
+import { createRouter, createWebHistory } from 'vue-router';
+import routes from '../../routes/index';
 
-function qs(obj: Record<string, any>) {
-  const p = Object.entries(obj)
-    .filter(([,v]) => v !== undefined && v !== null && v !== "")
-    .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
-    .join("&");
-  return p ? `?${p}` : "";
-}
-
-export const usersApi = {
-  async list(req: UsersListRequest): Promise<UsersListResponse> {
-    const q = qs(req as any);
-    const res = await fetch(`/api/users${q}`);
-    return res.json();
-  },
-
-  async get(req: UsersGetRequest): Promise<UsersGetResponse> {
-    const res = await fetch(`/api/users/${req.id}`);
-    return res.json();
-  },
-
-  async create(req: UsersCreateRequest): Promise<UsersCreateResponse> {
-    const res = await fetch("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req)
-    });
-    return res.json();
-  }
-};
-```
-
-## 9.4 — Composables (Reusable Stateful Logic)
-
-Composables handle all business logic and state management. They're consumed by feature components and views.
-
-### Composable: `src/client/src/composables/useUsers.ts`
-
-```ts
-import { ref } from "vue";
-import { usersApi } from "@/api/users.api";
-import type { UsersListRequest } from "@shared/users/request.users";
-
-export function useUsers() {
-  const items = ref([]);
-  const meta = ref({ total: 0, page: 1, perPage: 10, totalPages: 0 });
-  const loading = ref(false);
-  const error = ref<string | null>(null);
-
-  const state = ref<UsersListRequest>({
-    page: 1,
-    perPage: 10,
-    sortBy: "id",
-    sortOrder: "asc",
-    q: undefined,
-    role: undefined
-  });
-
-  async function load() {
-    loading.value = true;
-    error.value = null;
-    try {
-      const resp = await usersApi.list(state.value);
-      if (!resp.success) {
-        error.value = resp.error ?? "Unknown error";
-        items.value = [];
-      } else {
-        items.value = resp.data!.items;
-        meta.value = resp.data!.meta;
-      }
-    } catch (e: any) {
-      error.value = e.message;
-      items.value = [];
-    } finally {
-      loading.value = false;
-    }
-  }
-
-  function setPage(p: number) { state.value.page = p; void load(); }
-  function setPerPage(n: number) { state.value.perPage = n; state.value.page = 1; void load(); }
-  function setSort(by: string, order: "asc"|"desc") { state.value.sortBy = by; state.value.sortOrder = order; void load(); }
-  function setFilter(q?: string, role?: string) { state.value.q = q; state.value.role = role; state.value.page = 1; void load(); }
-
-  return { items, meta, loading, error, load, setPage, setPerPage, setSort, setFilter, state };
-}
-```
-
-## 9.5 — Feature Components (Business Logic)
-
-Feature components use composables and compose base components into reusable domain-specific UI blocks.
-
-`src/client/src/components/feature/UserList.vue`
-
-```vue
-<template>
-  <BaseCard>
-    <h2 class="mb-4 text-lg font-bold">Users</h2>
-    <div v-if="loading" class="text-gray-500">Loading...</div>
-    <div v-else-if="error" class="text-red-600">{{ error }}</div>
-    <div v-else>
-      <table class="w-full text-sm">
-        <thead><tr><th class="text-left">Name</th><th class="text-left">Role</th></tr></thead>
-        <tbody>
-          <tr v-for="user of items" :key="user.id">
-            <td>{{ user.name }}</td>
-            <td>{{ user.role }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="mt-4 flex gap-2">
-        <BaseButton @click="load" :disabled="loading">Refresh</BaseButton>
-      </div>
-    </div>
-  </BaseCard>
-</template>
-
-<script setup lang="ts">
-import { useUsers } from "@/composables/useUsers";
-import BaseCard from "@/components/base/Card.vue";
-import BaseButton from "@/components/base/Button.vue";
-
-const { items, loading, error, load } = useUsers();
-load();
-</script>
-```
-
-## 9.6 — Views (Router Entry Points)
-
-Views are thin orchestrators that compose layouts and feature components. They're tied to routes.
-
-`src/client/src/views/UserListView.vue`
-
-```vue
-<template>
-  <DefaultLayout>
-    <div class="space-y-4">
-      <h1 class="text-3xl font-bold">Users</h1>
-      <UserList />
-    </div>
-  </DefaultLayout>
-</template>
-
-<script setup lang="ts">
-import DefaultLayout from "@/layouts/DefaultLayout.vue";
-import UserList from "@/components/feature/UserList.vue";
-</script>
-```
-
-## 9.7 — Layouts (Shared Page Templates)
-
-Layouts abstract common structure (header, sidebar, footer) across multiple views.
-
-`src/client/src/layouts/DefaultLayout.vue`
-
-```vue
-<template>
-  <div class="flex min-h-screen flex-col">
-    <header class="bg-blue-600 text-white p-4"><h1>My App</h1></header>
-    <main class="flex-1 p-4"><slot /></main>
-    <footer class="bg-gray-200 p-4 text-center">© 2024</footer>
-  </div>
-</template>
-```
-
-## 9.8 — Router Configuration
-
-`src/client/src/app/router.ts`
-
-```ts
-import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "@/views/HomeView.vue";
-import UserListView from "@/views/UserListView.vue";
+const routeEntries = Object.values(routes).map((r: any) => ({
+  path: r.path,
+  component: () => import(`./pages${r.path || '/index'}.vue`)
+}));
 
 export const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    { path: "/", component: HomeView },
-    { path: "/users", component: UserListView }
-  ]
+  routes: routeEntries
 });
 ```
 
-## 9.9 — Best Practices Checklist
-
-| Principle | Example |
-| :--- | :--- |
-| **Base components are dumb** | `BaseButton.vue` takes `@click` emit, no logic |
-| **Feature components compose bases** | `UserList.vue` uses `useUsers()` + `BaseCard` |
-| **Composables handle all logic** | `useUsers()` manages pagination, filtering, API calls |
-| **Views are thin** | `UserListView.vue` just passes data to layouts/features |
-| **Types are shared** | Import directly from `@shared` in composables/components |
-| **Use `<script setup>`** | Cleaner Composition API syntax in `.vue` files |
-| **Scope styles locally** | Always use `<style scoped>` in components |
-
 ---
 
----
+## `template-default/src/app/pages/index.vue`
 
-# 10 — Dev script
+```vue
+<template>
+  <div>
+    <h1>Welcome to myfw starter</h1>
+    <router-link to="/users">Users</router-link>
+  </div>
+</template>
 
-`scripts/dev.sh`
-
-```bash
-#!/usr/bin/env bash
-set -e
-bun run dev:server &
-cd src/client && bunx vite
-```
-
-Make executable: `chmod +x scripts/dev.sh`
-
----
-
-# 11 — Docker & docker-compose
-
-`Dockerfile`
-
-```dockerfile
-FROM oven/bun:latest
-WORKDIR /app
-COPY . .
-RUN bun install
-# Build client
-RUN cd src/client && bun install && bunx vite build && cp -r dist/* ../../public/
-EXPOSE 3000
-CMD ["bun", "run", "src/server/index.ts"]
-```
-
-`docker-compose.yml`
-
-```yaml
-version: "3.8"
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  app:
-    build: .
-    depends_on:
-      - postgres
-    environment:
-      PG_HOST: postgres
-      PG_PORT: 5432
-      PG_DATABASE: app
-      PG_USER: postgres
-      PG_PASSWORD: postgres
-      APP_PORT: 3000
-    ports:
-      - "3000:3000"
-    command: bun run src/server/index.ts
-
-volumes:
-  pgdata:
+<script setup lang="ts">
+</script>
 ```
 
 ---
 
-# 12 — How to run (development)
+## `template-default/src/routes/index.ts`
 
-1. Start Postgres with docker-compose:
+```ts
+export default {
+  home: { path: '/' },
+  users: { path: '/users' }
+};
+```
 
-   ```bash
-   docker-compose up -d
-   ```
+---
 
-2. Install dependencies (root):
+## `template-default/src/server/index.ts`
+
+```ts
+import { createFrameworkServer } from '@myfw/runtime/server';
+import path from 'path';
+
+(async () => {
+  const { app, listen } = await createFrameworkServer({
+    apiDir: path.join(process.cwd(), 'src/server/api'),
+    staticDir: path.join(process.cwd(), 'dist/client'),
+    port: Number(process.env.PORT) || 3000
+  });
+
+  await listen();
+  console.log('Server listening on port', process.env.PORT || 3000);
+})();
+```
+
+---
+
+## `template-default/src/server/api/users.ts`
+
+```ts
+export default () => ({ message: 'users root' });
+```
+
+---
+
+## `template-default/src/types/User.ts`
+
+```ts
+export type User = {
+  id: string;
+  name: string;
+};
+```
+
+---
+
+## `example/` (generated example) — not populated here but the CLI will copy `template-default` into an example directory when you run `myfw create`.
+
+---
+
+## README (root)
+
+````
+# myfw — Monolithic framework scaffold
+
+## Quickstart (local dev)
+
+1. Bootstrap dependencies:
 
    ```bash
    bun install
-   cd src/client && bun install
-   ```
+   # or in root: bun install (workspaces will install packages)
+````
 
-3. Start dev (server + vite):
+2. Build the framework packages (optional for development):
 
    ```bash
+   bun run -w packages/framework build
+   bun run -w packages/cli build
+   ```
+
+3. Scaffold an example project using the CLI (you can run the built CLI or run the script directly):
+
+   ```bash
+   # from repository root
+   node packages/cli/dist/index.js create example-app
+   # or with bun if installed globally
+   bun run packages/cli/dist/index.js create example-app
+   ```
+
+4. Enter the generated app, install, and run dev:
+
+   ```bash
+   cd example-app
+   bun install
    bun run dev
    ```
 
-   * Server: `http://localhost:3000` serves static built client (after build) and `/api/*` endpoints when running server
-   * Vite dev: `http://localhost:5173` proxies `/api` to `:3000` (via vite config)
+## Publish framework runtime
 
-4. To run the full production app locally (container):
+1. Build `packages/framework` and publish to NPM (or a private registry).
 
-   ```bash
-   docker-compose up --build
-   # then open http://localhost:3000
-   ```
+2. Users can then `bun add @myfw/runtime` and your CLI will scaffold projects that import it.
+
+```
 
 ---
 
+## Notes & next steps
+
+- This scaffold is intentionally pragmatic and minimal. It provides the core pieces you need to iterate:
+  - runtime APIs (`createFrameworkServer`, `createFrameworkApp`, `createRoute`)
+  - templating and a CLI to scaffold apps
+  - a default Vite configuration for Bun/Vue
+
+- Next improvements I recommend implementing immediately:
+  1. Add a typed API client generator using route schemas
+  2. Add plugin support to the runtime (middleware, hooks)
+  3. Improve CLI `dev` to spawn child processes (vite + server) and proxy HMR
+  4. Add tests and CI (GitHub Actions) for packaging and releases
+
+---
+
+If you want, I can now:
+
+- Generate the actual filesystem (create files) and return a zip that you can download, or
+- Run through a step-by-step checklist to publish the first version, or
+- Implement the typed API generator and the CLI `dev` process supervisor (process manager) now.
+
+Which of those do you want next?
+
+```

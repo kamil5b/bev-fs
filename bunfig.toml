@@ -1,2 +1,4 @@
-[server]
-port = 3000
+# Bun config - keep minimal
+
+[install]
+# configuration if needed

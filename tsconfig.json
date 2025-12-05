@@ -2,18 +2,16 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@server/*": ["src/server/*"],
-      "@client/*": ["src/client/src/*"]
-    },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["bun-shim"]
   },
-  "include": ["src/server", "src/shared"],
-  "exclude": ["src/client"]
+  "include": ["packages/**/src", "template-default/src"]
 }

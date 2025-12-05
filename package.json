@@ -1,20 +1,14 @@
 {
-  "name": "bun-fullstack",
+  "name": "myfw-monorepo",
   "private": true,
-  "workspaces": ["src/client"],
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev:server": "bun run src/server/index.ts",
-    "dev:client": "cd src/client && bunx vite",
-    "dev": "bash scripts/dev.sh",
-    "build:client": "bun run build.ts",
-    "start": "bun run src/server/index.ts"
-  },
-  "dependencies": {
-    "elysia": "latest",
-    "@elysiajs/static": "latest",
-    "pg": "latest"
-  },
-  "devDependencies": {
-    "typescript": "latest"
+    "bootstrap": "bun install",
+    "dev:example": "cd example && bun run dev",
+    "build:example": "cd example && bun run build",
+    "publish:framework": "cd packages/framework && npm publish"
   }
 }

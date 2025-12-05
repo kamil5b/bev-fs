@@ -1,0 +1,25 @@
+{
+  "name": "myfw-starter",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:server": "bun run src/server/index.ts",
+    "dev:client": "vite",
+    "dev": "bun run --watch src/server/index.ts & vite",
+    "build:client": "vite build",
+    "build:server": "bun build src/server/index.ts --outdir dist/server",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@myfw/runtime": "*",
+    "elysia": "*",
+    "@elysiajs/static": "*",
+    "vue": "*",
+    "vue-router": "*"
+  },
+  "devDependencies": {
+    "vite": "*",
+    "@vitejs/plugin-vue": "*",
+    "typescript": "*"
+  }
+}
