@@ -13,6 +13,18 @@ async function createProject(name: string) {
   const dest = path.join(process.cwd(), name);
   if (fs.existsSync(dest)) throw new Error("Destination exists");
   await fse.copy(templateDir, dest);
+  
+  // Rename dotfiles that npm doesn't package
+  const gitignoreSrc = path.join(dest, "gitignore");
+  if (fs.existsSync(gitignoreSrc)) {
+    fs.renameSync(gitignoreSrc, path.join(dest, ".gitignore"));
+  }
+  
+  const bunfigSrc = path.join(dest, "bunfig-template.toml");
+  if (fs.existsSync(bunfigSrc)) {
+    fs.renameSync(bunfigSrc, path.join(dest, "bunfig.toml"));
+  }
+  
   console.log("Project scaffolded to", dest);
   console.log("Run: cd %s && bun install && bun run dev", name);
 }
