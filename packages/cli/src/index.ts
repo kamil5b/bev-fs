@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const templateDir = path.join(__dirname, "../../template-default");
+const templateDir = path.join(__dirname, "../../../template-default");
 
 async function createProject(name: string) {
   const dest = path.join(process.cwd(), name);

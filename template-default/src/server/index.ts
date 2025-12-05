@@ -1,4 +1,4 @@
-import { createFrameworkServer } from '@myfw/runtime';
+import { createFrameworkServer } from '../../../packages/framework/src/index';
 import path from 'path';
 
 (async () => {
