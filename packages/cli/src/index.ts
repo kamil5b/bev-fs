@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const templateDir = path.join(__dirname, "../../../template-default");
+const templateDir = path.join(__dirname, "./template");
 
 async function createProject(name: string) {
   const dest = path.join(process.cwd(), name);
@@ -26,24 +26,13 @@ async function runDev() {
 async function main(argv = process.argv.slice(2)) {
   const cmd = argv[0];
   if (!cmd || cmd === "help") {
-    console.log("bun-elysia-vue-fs create <name> — scaffold a new project");
-    console.log("bun-elysia-vue-fs dev — run dev (in project root)");
+    console.log("create-bev-fs <name> — scaffold a new project");
     process.exit(0);
   }
 
-  if (cmd === "create") {
-    const name = argv[1];
-    if (!name) throw new Error("missing project name");
-    await createProject(name);
-    return;
-  }
-
-  if (cmd === "dev") {
-    await runDev();
-    return;
-  }
-
-  console.log("unknown command", cmd);
+  const name = cmd;
+  if (!name) throw new Error("missing project name");
+  await createProject(name);
 }
 
 main().catch(e => {

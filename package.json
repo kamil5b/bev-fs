@@ -1,5 +1,5 @@
 {
-  "name": "bun-elysia-vue-fs-monorepo",
+  "name": "bev-fs-monorepo",
   "private": true,
   "version": "0.1.0",
   "workspaces": [

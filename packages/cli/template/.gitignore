@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+bun.lock
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+.history/

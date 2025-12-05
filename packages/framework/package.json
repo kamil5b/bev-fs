@@ -1,12 +1,14 @@
 {
-  "name": "@bun-elysia-vue-fs/runtime",
-  "version": "0.1.0",
+  "name": "bev-fs",
+  "version": "0.1.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc --outDir dist"
+    "build": "tsc src/index.ts src/**/*.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --module ESNext --moduleResolution node"
   },
   "dependencies": {
     "elysia": "*",

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev:server": "bun src/server/index.ts",
+    "dev:server": "tsx src/server/index.ts",
     "dev:client": "vite",
-    "dev": "concurrently \"bun src/server/index.ts\" \"vite\"",
+    "dev": "concurrently \"tsx src/server/index.ts\" \"vite\"",
     "build:client": "vite build",
     "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs",
     "build": "bun run build:client && bun run build:server"
@@ -21,6 +21,7 @@
     "vite": "*",
     "@vitejs/plugin-vue": "*",
     "typescript": "*",
+    "tsx": "*",
     "concurrently": "*"
   }
 }

@@ -1,12 +1,16 @@
 {
-  "name": "@bun-elysia-vue-fs/cli",
-  "version": "0.1.0",
+  "name": "create-bev-fs",
+  "version": "0.1.13",
   "type": "module",
   "bin": {
-    "bun-elysia-vue-fs": "dist/index.js"
+    "create-bev-fs": "wrapper.js"
   },
+  "files": [
+    "dist",
+    "wrapper.js"
+  ],
   "scripts": {
-    "build": "tsc --outDir dist"
+    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/template dist/"
   },
   "dependencies": {
     "fs-extra": "*",

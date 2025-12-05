@@ -1,4 +1,4 @@
-# bun-elysia-vue-fs — Monolithic Framework Scaffold
+# Bun Elysia Vue Fullstack — Monolithic Framework Scaffold
 
 This is a complete, production-oriented scaffold for a reusable framework based on Vue + Vite + Bun + Elysia. It includes:
 
