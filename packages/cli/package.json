@@ -11,5 +11,10 @@
   "dependencies": {
     "fs-extra": "*",
     "fast-glob": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "@types/node": "*",
+    "@types/fs-extra": "*"
   }
 }

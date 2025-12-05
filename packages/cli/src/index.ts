@@ -3,9 +3,11 @@
 import fs from "fs";
 import fse from "fs-extra";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const root = path.resolve(process.cwd());
-const templateDir = path.join(import.meta.dir, "../../template-default");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const templateDir = path.join(__dirname, "../../template-default");
 
 async function createProject(name: string) {
   const dest = path.join(process.cwd(), name);

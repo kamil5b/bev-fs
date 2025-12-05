@@ -13,5 +13,10 @@
     "@elysiajs/static": "*",
     "vue": "*",
     "vue-router": "*"
+  },
+  "devDependencies": {
+    "typescript": "*",
+    "@types/node": "*",
+    "@types/bun": "*"
   }
 }

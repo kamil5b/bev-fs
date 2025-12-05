@@ -3,15 +3,9 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "node",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "types": ["bun-shim"]
-  },
-  "include": ["packages/**/src", "template-default/src"]
+    "resolveJsonModule": true
+  }
 }
