@@ -20,8 +20,8 @@ async function runDev() {
 async function main(argv = process.argv.slice(2)) {
     const cmd = argv[0];
     if (!cmd || cmd === "help") {
-        console.log("myfw create <name> — scaffold a new project");
-        console.log("myfw dev — run dev (in project root)");
+        console.log("bun-elysia-vue-fs create <name> — scaffold a new project");
+        console.log("bun-elysia-vue-fs dev — run dev (in project root)");
         process.exit(0);
     }
     if (cmd === "create") {

@@ -1,9 +1,9 @@
 {
-  "name": "@myfw/cli",
+  "name": "@bun-elysia-vue-fs/cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "myfw": "dist/index.js"
+    "bun-elysia-vue-fs": "dist/index.js"
   },
   "scripts": {
     "build": "tsc --outDir dist"

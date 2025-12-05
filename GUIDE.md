@@ -1,4 +1,4 @@
-# myfw — Monolithic Framework Scaffold
+# bun-elysia-vue-fs — Monolithic Framework Scaffold
 
 This canvas contains a complete, production-oriented scaffold for a reusable framework based on your architecture (Vue + Vite + Bun + Elysia). It includes:
 
@@ -14,7 +14,7 @@ Open the document files below and follow the README in the root for quick start 
 ## File tree
 
 ```
-myfw-root/
+bun-elysia-vue-fs-root/
 ├─ package.json
 ├─ bunfig.toml
 ├─ tsconfig.json
@@ -65,7 +65,7 @@ myfw-root/
 
 ```json
 {
-  "name": "myfw-monorepo",
+  "name": "bun-elysia-vue-fs-monorepo",
   "private": true,
   "version": "0.1.0",
   "workspaces": [
@@ -121,7 +121,7 @@ myfw-root/
 
 ```json
 {
-  "name": "@myfw/runtime",
+  "name": "@bun-elysia-vue-fs/runtime",
   "version": "0.1.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -292,11 +292,11 @@ export type Json = Record<string, unknown>;
 
 ```json
 {
-  "name": "@myfw/cli",
+  "name": "@bun-elysia-vue-fs/cli",
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "myfw": "dist/index.js"
+    "bun-elysia-vue-fs": "dist/index.js"
   },
   "scripts": {
     "build": "bun tsc --outDir dist"
@@ -339,8 +339,8 @@ async function runDev() {
 async function main(argv = process.argv.slice(2)) {
   const cmd = argv[0];
   if (!cmd || cmd === "help") {
-    console.log("myfw create <name> — scaffold a new project");
-    console.log("myfw dev — run dev (in project root)");
+    console.log("bun-elysia-vue-fs create <name> — scaffold a new project");
+    console.log("bun-elysia-vue-fs dev — run dev (in project root)");
     process.exit(0);
   }
 
@@ -371,7 +371,7 @@ main().catch(e => {
 
 ```json
 {
-  "name": "myfw-starter",
+  "name": "bun-elysia-vue-fs-starter",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -467,7 +467,7 @@ export const router = createRouter({
 ```vue
 <template>
   <div>
-    <h1>Welcome to myfw starter</h1>
+    <h1>Welcome to bun-elysia-vue-fs starter</h1>
     <router-link to="/users">Users</router-link>
   </div>
 </template>
@@ -492,7 +492,7 @@ export default {
 ## `template-default/src/server/index.ts`
 
 ```ts
-import { createFrameworkServer } from '@myfw/runtime/server';
+import { createFrameworkServer } from '@bun-elysia-vue-fs/runtime/server';
 import path from 'path';
 
 (async () => {
@@ -528,14 +528,14 @@ export type User = {
 
 ---
 
-## `example/` (generated example) — not populated here but the CLI will copy `template-default` into an example directory when you run `myfw create`.
+## `example/` (generated example) — not populated here but the CLI will copy `template-default` into an example directory when you run `bun-elysia-vue-fs create`.
 
 ---
 
 ## README (root)
 
 ````
-# myfw — Monolithic framework scaffold
+# bun-elysia-vue-fs — Monolithic framework scaffold
 
 ## Quickstart (local dev)
 
@@ -574,7 +574,7 @@ export type User = {
 
 1. Build `packages/framework` and publish to NPM (or a private registry).
 
-2. Users can then `bun add @myfw/runtime` and your CLI will scaffold projects that import it.
+2. Users can then `bun add @bun-elysia-vue-fs/runtime` and your CLI will scaffold projects that import it.
 
 ```
 

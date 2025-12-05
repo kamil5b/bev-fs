@@ -1,5 +1,5 @@
 {
-  "name": "myfw-starter",
+  "name": "bun-elysia-vue-fs-starter",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@bun-elysia-vue-fs/runtime": "^0.1.0",
     "elysia": "*",
     "@elysiajs/static": "*",
     "vue": "*",

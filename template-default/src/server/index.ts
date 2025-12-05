@@ -1,4 +1,4 @@
-import { createFrameworkServer } from '../../../packages/framework/src/index';
+import { createFrameworkServer } from '@bun-elysia-vue-fs/runtime';
 import path from 'path';
 
 (async () => {

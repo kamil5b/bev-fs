@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>Welcome to myfw starter</h1>
+    <h1>Welcome to bun-elysia-vue-fs starter</h1>
     <router-link to="/users">Users</router-link>
   </div>
 </template>

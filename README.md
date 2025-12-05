@@ -1,4 +1,4 @@
-# myfw — Monolithic Framework Scaffold
+# bun-elysia-vue-fs — Monolithic Framework Scaffold
 
 This is a complete, production-oriented scaffold for a reusable framework based on Vue + Vite + Bun + Elysia. It includes:
 
@@ -41,12 +41,12 @@ This is a complete, production-oriented scaffold for a reusable framework based 
 
 1. Build `packages/framework` and publish to NPM (or a private registry).
 
-2. Users can then `bun add @myfw/runtime` and your CLI will scaffold projects that import it.
+2. Users can then `bun add @bun-elysia-vue-fs/runtime` and your CLI will scaffold projects that import it.
 
 ## Project Structure
 
 ```
-myfw-root/
+bun-elysia-vue-fs-root/
 ├─ package.json
 ├─ bunfig.toml
 ├─ tsconfig.json
