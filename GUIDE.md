@@ -412,7 +412,7 @@ main().catch(e => {
     "dev:client": "vite",
     "dev": "concurrently \"bun src/server/index.ts\" \"vite\"",
     "build:client": "vite build",
-    "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs",
+    "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs --target=bun",
     "build": "bun run build:client && bun run build:server"
   },
   "dependencies": {
