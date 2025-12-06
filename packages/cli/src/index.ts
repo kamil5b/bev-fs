@@ -4,6 +4,7 @@ import fs from "fs";
 import fse from "fs-extra";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,14 @@ async function createProject(name: string) {
   const bunfigSrc = path.join(dest, "bunfig-template.toml");
   if (fs.existsSync(bunfigSrc)) {
     fs.renameSync(bunfigSrc, path.join(dest, "bunfig.toml"));
+  }
+  
+  // Initialize git repository
+  console.log("Initializing git repository...");
+  try {
+    execSync("git init", { cwd: dest, stdio: "pipe" });
+  } catch (e) {
+    console.warn("Failed to initialize git (git may not be installed)");
   }
   
   console.log("Project scaffolded to", dest);
