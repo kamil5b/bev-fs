@@ -1,31 +1,16 @@
-import type { ProductAPI } from '../../../../shared/api';
-import { store } from '../../../store';
+import { getProduct, updateProduct, deleteProduct } from '../../../handler/product.handler';
 
 // GET /api/product/:id - get a product by id
-export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
-  const id = parseInt(params.id);
-  const product = store.products.find((p: any) => p.id === id);
-  return { product: product || { id, name: `Product ${id}`, price: 0 } };
+export const GET = ({ params }: any) => {
+  return getProduct(params);
 };
 
 // PATCH /api/product/:id - update a product
-export const PATCH = ({ params, body }: any): ProductAPI.UpdateResponse => {
-  const id = parseInt(params.id);
-  const req = body as ProductAPI.UpdateRequest;
-  const product = store.products.find((p: any) => p.id === id);
-  if (product) {
-    if (req.name !== undefined) product.name = req.name;
-    if (req.price !== undefined) product.price = req.price;
-  }
-  return { updated: product || { id, name: `Product ${id}`, price: 0 } };
+export const PATCH = ({ params, body }: any) => {
+  return updateProduct(params, body);
 };
 
 // DELETE /api/product/:id - delete a product
-export const DELETE = ({ params }: any): ProductAPI.DeleteResponse => {
-  const id = parseInt(params.id);
-  const index = store.products.findIndex((p: any) => p.id === id);
-  if (index !== -1) {
-    store.products.splice(index, 1);
-  }
-  return { deleted: id };
+export const DELETE = ({ params }: any) => {
+  return deleteProduct(params);
 };

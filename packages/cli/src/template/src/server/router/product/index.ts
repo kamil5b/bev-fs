@@ -1,18 +1,11 @@
-import type { ProductAPI } from '../../../shared/api';
-import { store } from '../../store';
+import { getProducts, createProduct } from '../../handler/product.handler';
 
 // GET /api/product - list all products
-export const GET = (): ProductAPI.GetListResponse => {
-  return { products: store.products };
+export const GET = () => {
+  return getProducts();
 };
 
 // POST /api/product - create a product
-export const POST = ({ body }: any): ProductAPI.CreateResponse => {
-  const req = body as ProductAPI.CreateRequest;
-  const newProduct = {
-    id: Math.max(...store.products.map((p: any) => p.id), 0) + 1,
-    ...req
-  };
-  store.products.push(newProduct);
-  return { created: newProduct };
+export const POST = ({ body }: any) => {
+  return createProduct(body);
 };

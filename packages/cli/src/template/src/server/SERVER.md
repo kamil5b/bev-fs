@@ -14,9 +14,16 @@ This guide will teach you how to build type-safe API endpoints using the bev-fs 
 
 ```
 src/server/
-├── index.ts          # Server entry point
-├── middleware.ts     # Logging middleware factory
-├── store.ts          # Shared in-memory data store
+├── index.ts            # Server entry point
+├── middleware.ts       # Logging middleware factory
+├── db/
+│   └── store.ts        # Shared in-memory data store (database layer)
+├── handler/
+│   └── product.handler.ts    # HTTP request handlers (business logic entry point)
+├── service/
+│   └── product.service.ts    # Business logic & response formatting layer
+├── repository/
+│   └── product.repository.ts # Data access abstraction over store
 └── router/
     └── product/
         ├── index.ts                  # GET/POST /api/product
@@ -28,7 +35,11 @@ src/server/
                     └── index.ts      # GET/PATCH/DELETE /api/product/:id/progress/:progressId
 ```
 
-**Key concept:** Your folder structure IS your API routing structure. Each route location needs an `index.ts` file to handle requests.
+**Key concepts:** 
+- Your folder structure in `router/` IS your API routing structure
+- Clean architecture layers: **Router → Handler → Service → Repository → DB**
+- Each handler delegates to the service layer, never directly accessing the store
+- This separation makes your code testable, maintainable, and scalable
 
 ## Getting Started
 
@@ -62,70 +73,146 @@ import { createLoggingMiddleware } from './middleware';
 
 💡 **Tip:** The `routerDir` and `staticDir` options are optional. If omitted, the framework uses sensible defaults based on your working directory.
 
-## Step 2: Understanding Data Persistence
+## Step 2: Understanding the Clean Architecture Layers
 
-The `store.ts` file provides a simple in-memory database for development. Here's how it works:
+The bev-fs server uses a clean, layered architecture for separation of concerns:
+
+```
+HTTP Request
+    ↓
+Router (File-based routing)
+    ↓
+Handler (Parse params, call service)
+    ↓
+Service (Business logic, response formatting)
+    ↓
+Repository (Data access abstraction)
+    ↓
+Database/Store (Persistence layer)
+```
+
+### Layer Responsibilities
+
+**Router** — Thin routing layer
+- Maps HTTP methods to handler functions
+- Minimal logic — just imports and delegates
+- Example: `src/server/router/product/index.ts`
+
+**Handler** — HTTP request entry points
+- Parses route params and request body
+- Calls the appropriate service methods
+- Returns formatted responses
+- Example: `src/server/handler/product.handler.ts`
+
+**Service** — Business logic and orchestration
+- Contains core application logic
+- Calls repository methods for data access
+- Formats responses in the API contract shape
+- Example: `src/server/service/product.service.ts`
+
+**Repository** — Data access abstraction
+- Abstracts over the store/database
+- Provides clean CRUD interface
+- Used by service layer, never directly by handlers
+- Example: `src/server/repository/product.repository.ts`
+
+**Database/Store** — Persistence
+- Holds your actual data (in-memory, SQL, etc.)
+- Only accessed through repository layer
+- Example: `src/server/db/store.ts`
+
+### Data Flow Example
+
+Creating a product:
+
+```
+Client POST /api/product { name, price }
+  ↓
+router/product/index.ts
+  exports POST = ({ body }: any) => createProduct(body);
+  ↓
+handler/product.handler.ts
+  export const createProduct = (body: any) => 
+    productService.createProduct(body);
+  ↓
+service/product.service.ts
+  export const createProduct = (data: ProductRequest.Create) => {
+    const created = productRepository.createProduct(data);
+    return { created }; // Wrapped in response
+  }
+  ↓
+repository/product.repository.ts
+  export const createProduct = (data) => {
+    const newProduct = { id: nextId(), ...data };
+    store.products.push(newProduct);
+    return newProduct;
+  }
+  ↓
+db/store.ts
+  Actual data is stored in store.products array
+```
+
+### Understanding Data Persistence
+
+The `db/store.ts` file provides a simple in-memory database for development:
 
 ```typescript
-// src/server/store.ts
-import type { Product, Progress } from '../shared/api';
-
-const products: Product[] = [
-  { id: 1, name: 'Product 1', price: 9.99 },
-  { id: 2, name: 'Product 2', price: 19.99 }
-];
-
-const progress: Progress[] = [];
+// src/server/db/store.ts
+import type { Product, Progress } from '../../shared';
 
 export const store = {
-  products,
-  
-  getProgressByProductId(productId: number) {
-    return progress.filter(p => p.productId === productId);
+  products: [
+    { id: 1, name: 'Product 1', price: 9.99 },
+    { id: 2, name: 'Product 2', price: 19.99 }
+  ] as ProductResponse.GetList['products'],
+
+  productProgress: {
+    1: [{ id: 1, productId: 1, percentage: 50, status: 'in-progress', ... }],
+    2: [{ id: 2, productId: 2, percentage: 100, status: 'completed', ... }]
   },
-  
-  createProgress(productId: number, data: any) {
-    const newProgress = {
-      id: Math.max(...progress.map(p => p.id), 0) + 1,
-      productId,
-      percentage: data.percentage,
-      status: data.status || 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    progress.push(newProgress);
-    return newProgress;
-  }
+
+  // Helper methods
+  getProgressByProductId(productId: number) { ... },
+  createProgress(productId: number, data: any) { ... },
+  updateProgress(productId: number, id: number, data: any) { ... },
+  deleteProgress(productId: number, id: number) { ... }
 };
 ```
 
-**Why use a shared store?**
-- ✅ All API handlers import the same object reference
-- ✅ Modifications persist across requests within the same process
+**Why this architecture?**
+- ✅ **Separation of concerns** — Each layer has one job
+- ✅ **Testability** — Mock repository for unit testing service
+- ✅ **Reusability** — Service logic isn't tied to HTTP
+- ✅ **Flexibility** — Swap store for database without changing handlers/services
+- ✅ **Maintainability** — Changes to business logic in one place
+
+**Data persistence notes:**
+- ⚠️ In-memory store resets on server restart
+- ⚠️ Not suitable for production
 - ✅ Perfect for demos and rapid prototyping
-- ⚠️ Data is lost when the server restarts
-- ⚠️ Not suitable for production (use a real database)
+- ✅ Easy to swap for a real database (see Production Deployment section)
 
 **Key pattern:** Export a singleton object that all handlers can import and mutate directly.
 
 ## Step 3: Understanding Directory-Based Routing
 
-The magic of bev-fs is that your folder structure defines your API routes. No configuration needed!
+The magic of bev-fs is that your folder structure in `src/server/router/` defines your API routes automatically. No configuration needed!
 
 ### How It Works
 
 1. Place an `index.ts` file in any folder under `src/server/router/`
 2. The framework automatically creates an API route at `/api/<folder-path>`
 3. Use `[paramName]` folders to create dynamic route parameters
+4. Export HTTP method functions (`GET`, `POST`, `PATCH`, `DELETE`) that delegate to handlers
 
 ### Route Mapping Examples
 
-| File Path | Generated API Route | Description |
-|-----------|---------------------|-------------|
-| `router/product/index.ts` | `GET /api/product` | List all products |
-| `router/product/[id]/index.ts` | `GET /api/product/:id` | Get product by ID |
-| `router/product/[id]/progress/index.ts` | `GET /api/product/:id/progress` | Get progress for a product |
-| `router/product/[id]/progress/[progressId]/index.ts` | `GET /api/product/:id/progress/:progressId` | Get specific progress entry |
+| File Path | Generated Route | Handler Imported From |
+|-----------|-----------------|----------------------|
+| `router/product/index.ts` | `GET/POST /api/product` | `handler/product.handler.ts` |
+| `router/product/[id]/index.ts` | `GET/PATCH/DELETE /api/product/:id` | `handler/product.handler.ts` |
+| `router/product/[id]/progress/index.ts` | `GET/POST /api/product/:id/progress` | `handler/product.handler.ts` |
+| `router/product/[id]/progress/[progressId]/index.ts` | `GET/PATCH/DELETE /api/product/:id/progress/:progressId` | `handler/product.handler.ts` |
 
 ### Routing Rules
 
@@ -134,152 +221,275 @@ The magic of bev-fs is that your folder structure defines your API routes. No co
 - Use `[paramName]` syntax for dynamic segments (e.g., `[id]`, `[progressId]`)
 - Nest directories to create hierarchical routes
 - Export uppercase HTTP method names: `GET`, `POST`, `PATCH`, `DELETE`
+- Import handler functions and call them with minimal processing
 
 ❌ **DON'T:**
 - Put handlers in files other than `index.ts` (they won't be registered)
 - Use lowercase method names (use `DELETE` not `delete`)
+- Write business logic directly in router files (put it in handlers/services)
 - Rely on filename for routing (only directory structure matters)
 
 ## Step 4: Writing Your First API Handler
 
-### Creating a Basic Endpoint
+The handler layer is your entry point for HTTP requests. It parses parameters and delegates to the service layer.
 
-Let's create a handler at `src/server/router/product/index.ts` that lists and creates products:
+### Handler Layer
+
+Handlers sit between router and service. They:
+1. Extract params and body from the HTTP context
+2. Call service methods with parsed data
+3. Return service responses directly
+
+Example: `src/server/handler/product.handler.ts`
+
+```typescript
+import { productService } from '../service/product.service';
+
+// Product List Handler
+export const getProducts = () => {
+  return productService.listProducts();
+};
+
+// Product Create Handler
+export const createProduct = (body: any) => {
+  return productService.createProduct(body);
+};
+
+// Product Detail Handler
+export const getProduct = (params: any) => {
+  const id = parseInt(params.id);
+  return productService.getProduct(id);
+};
+
+// Product Update Handler
+export const updateProduct = (params: any, body: any) => {
+  const id = parseInt(params.id);
+  return productService.updateProduct(id, body);
+};
+
+// Product Delete Handler
+export const deleteProduct = (params: any) => {
+  const id = parseInt(params.id);
+  return productService.deleteProduct(id);
+};
+
+// Progress operations follow the same pattern...
+export const getProductProgress = (params: any) => {
+  const productId = parseInt(params.id);
+  return productService.listProductProgress(productId);
+};
+```
+
+### Service Layer
+
+Services contain business logic and call the repository. They:
+1. Implement business logic and validation
+2. Format responses to match API contracts
+3. Call repository methods for data access
+
+Example: `src/server/service/product.service.ts`
+
+```typescript
+import { productRepository } from '../repository/product.repository';
+import { ProductRequest, ProductResponse } from '../../shared';
+
+export const productService = {
+  listProducts(): ProductResponse.GetList {
+    const products = productRepository.getAllProducts();
+    return { products };
+  },
+
+  getProduct(id: number): ProductResponse.GetById {
+    const product = productRepository.getProductById(id);
+    return { 
+      product: product || { id, name: `Product ${id}`, price: 0 } 
+    };
+  },
+
+  createProduct(data: ProductRequest.Create): ProductResponse.Create {
+    const created = productRepository.createProduct(data);
+    return { created };
+  },
+
+  updateProduct(id: number, data: ProductRequest.Update): ProductResponse.Update {
+    const updated = productRepository.updateProduct(id, data);
+    return { 
+      updated: updated || { id, name: `Product ${id}`, price: 0 } 
+    };
+  },
+
+  deleteProduct(id: number): ProductResponse.Delete {
+    productRepository.deleteProduct(id);
+    return { deleted: id };
+  }
+};
+```
+
+**Service benefits:**
+- ✅ All business logic in one place (not scattered in handlers)
+- ✅ Handlers are thin and simple
+- ✅ Services are testable without HTTP context
+- ✅ Service logic can be reused for different transports (API, CLI, etc.)
+
+### Repository Layer
+
+Repositories provide a data access abstraction. They:
+1. Wrap store/database operations
+2. Provide a clean interface for data access
+3. Handle data access validation
+
+Example: `src/server/repository/product.repository.ts`
+
+```typescript
+import { store } from '../db/store';
+import { ProductRequest } from '../../shared';
+
+export const productRepository = {
+  getAllProducts() {
+    return store.products;
+  },
+
+  getProductById(id: number) {
+    return store.products.find((p: any) => p.id === id);
+  },
+
+  createProduct(data: ProductRequest.Create) {
+    const newProduct = {
+      id: Math.max(...store.products.map(p => p.id), 0) + 1,
+      name: data.name,
+      price: data.price
+    };
+    store.products.push(newProduct);
+    return newProduct;
+  },
+
+  updateProduct(id: number, data: ProductRequest.Update) {
+    const product = this.getProductById(id);
+    if (product) {
+      if (data.name !== undefined) product.name = data.name;
+      if (data.price !== undefined) product.price = data.price;
+    }
+    return product;
+  },
+
+  deleteProduct(id: number): boolean {
+    const index = store.products.findIndex((p: any) => p.id === id);
+    if (index !== -1) {
+      store.products.splice(index, 1);
+      return true;
+    }
+    return false;
+  }
+};
+```
+
+**Repository benefits:**
+- ✅ Database changes only require updating the repository
+- ✅ Can swap store for real database (SQL, MongoDB, etc.)
+- ✅ Service layer stays the same when data source changes
+- ✅ Makes switching databases painless
+
+### Connecting It All Together — The Router
+
+Finally, the thin router layer imports handlers and calls them:
 
 ```typescript
 // src/server/router/product/index.ts
-import { store } from '../../store';
-import type { ProductAPI } from '../../../shared/api';
+import { getProducts, createProduct } from '../../handler/product.handler';
 
-// GET /api/product - List all products
-export const GET = (): ProductAPI.GetListResponse => {
-  return { products: store.products };
+// GET /api/product - list all products
+export const GET = () => {
+  return getProducts();
 };
 
-// POST /api/product - Create a new product
-export const POST = ({ body }: any): ProductAPI.CreateResponse => {
-  const req = body as ProductAPI.CreateRequest;
-  const newProduct = {
-    id: Math.max(...store.products.map(p => p.id), 0) + 1,
-    ...req
-  };
-  store.products.push(newProduct);
-  return { created: newProduct };
+// POST /api/product - create a product
+export const POST = ({ body }: any) => {
+  return createProduct(body);
 };
 ```
-
-**What's happening here:**
-
-1. **Import the store** — Access your shared data
-2. **Import types** — Use TypeScript types from `shared/api.ts` for type safety
-3. **Export HTTP methods** — Each export corresponds to an HTTP verb (must be UPPERCASE)
-4. **Destructure context** — `{ body }` gives you the request body
-5. **Return typed responses** — The return type matches your API contract
-
-💡 **Handler Anatomy:**
-- Each handler receives Elysia context: `{ body, params, query, request, headers, ... }`
-- Return value is automatically JSON-serialized
-- Thrown errors become HTTP 500 responses with error messages
-
-### Working with Route Parameters
-
-Create `src/server/router/product/[id]/index.ts` to handle individual products:
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import { store } from '../../../store';
-import type { ProductAPI } from '../../../../shared/api';
+import { getProduct, updateProduct, deleteProduct } from '../../../handler/product.handler';
 
-// GET /api/product/:id - Get a specific product
-export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
-  const id = parseInt(params.id);
-  const product = store.products.find(p => p.id === id);
-  if (!product) throw new Error('Product not found');
-  return { product };
+// GET /api/product/:id - get a product by id
+export const GET = ({ params }: any) => {
+  return getProduct(params);
 };
 
-// PATCH /api/product/:id - Update a product
-export const PATCH = ({ params, body }: any): ProductAPI.UpdateResponse => {
-  const id = parseInt(params.id);
-  const req = body as ProductAPI.UpdateRequest;
-  const product = store.products.find(p => p.id === id);
-  
-  if (!product) throw new Error('Product not found');
-  
-  if (req.name !== undefined) product.name = req.name;
-  if (req.price !== undefined) product.price = req.price;
-  
-  return { updated: product };
+// PATCH /api/product/:id - update a product
+export const PATCH = ({ params, body }: any) => {
+  return updateProduct(params, body);
 };
 
-// DELETE /api/product/:id - Delete a product
-export const DELETE = ({ params }: any): ProductAPI.DeleteResponse => {
-  const id = parseInt(params.id);
-  const index = store.products.findIndex(p => p.id === id);
-  
-  if (index === -1) throw new Error('Product not found');
-  
-  store.products.splice(index, 1);
-  return { deleted: id };
+// DELETE /api/product/:id - delete a product
+export const DELETE = ({ params }: any) => {
+  return deleteProduct(params);
 };
 ```
 
-**Understanding Route Parameters:**
+**Router pattern:**
+- ✅ Thin routing layer — just imports and calls handlers
+- ✅ No business logic in routers
+- ✅ Minimal parameter parsing (delegates to handlers)
+- ✅ Easy to understand the flow at a glance
 
-- The `[id]` folder name becomes `:id` in the route
-- Access it via `params.id` in your handler
-- Parameter names must match the folder name exactly (case-sensitive)
-- Always parse string parameters: `parseInt(params.id)` or `+params.id`
+## Step 5: Working with Route Parameters and Nested Routes
 
-🔑 **Multiple Parameters:**
-For nested routes like `/api/product/:id/progress/:progressId`, you get both:
-- `params.id` (from the `[id]` folder)
-- `params.progressId` (from the `[progressId]` folder)
+### Understanding Parameters
+
+Route parameters come from `[paramName]` folder names:
+
+```typescript
+// For route /api/product/[id]/index.ts
+export const GET = ({ params }: any) => {
+  const id = parseInt(params.id);  // params.id comes from [id] folder
+  return getProduct({ id });
+};
+```
+
+**Parameter rules:**
+- Folder name `[id]` becomes `params.id` (case-sensitive)
+- Parameters are always strings — parse as needed: `parseInt(params.id)`
+- Multiple parameters work for nested routes: `params.id`, `params.progressId`, etc.
 
 ### Building Nested Routes
 
-Create `src/server/router/product/[id]/progress/index.ts` for nested resources:
+For routes like `/api/product/:id/progress/:progressId`, you get both parameters:
 
 ```typescript
-// src/server/router/product/[id]/progress/index.ts
-import { store } from '../../../../store';
-import type { ProgressAPI } from '../../../../../shared/api';
+// src/server/router/product/[id]/progress/[progressId]/index.ts
+import { getProgressDetail } from '../../../../../handler/product.handler';
 
-// GET /api/product/:id/progress - List progress entries for a product
-export const GET = ({ params }: any): ProgressAPI.GetListResponse => {
-  const productId = parseInt(params.id);
-  return { progress: store.getProgressByProductId(productId) };
-};
-
-// POST /api/product/:id/progress - Create a progress entry
-export const POST = ({ params, body }: any): ProgressAPI.CreateResponse => {
-  const productId = parseInt(params.id);
-  const data = body as ProgressAPI.CreateRequest;
-  const created = store.createProgress(productId, data);
-  return { created };
+export const GET = ({ params }: any) => {
+  // params.id from [id] folder
+  // params.progressId from [progressId] folder
+  return getProgressDetail(params);
 };
 ```
 
-**Nested Routing Pattern:**
+In the handler:
 
-1. **Parent parameters are inherited** — `params.id` comes from the `[id]` folder above
-2. **Validate parent existence** — Check the parent resource exists before creating children
-3. **Build hierarchies naturally** — Your folder structure mirrors your API design
-
-🎯 **Real-world example:**
-```
-router/
-└── product/
-    ├── index.ts              # GET /api/product
-    └── [id]/
-        ├── index.ts          # GET /api/product/:id
-        └── progress/
-            ├── index.ts      # GET /api/product/:id/progress
-            └── [progressId]/
-                └── index.ts  # GET /api/product/:id/progress/:progressId
+```typescript
+export const getProgressDetail = (params: any) => {
+  const productId = parseInt(params.id);
+  const progressId = parseInt(params.progressId);
+  return productService.getProductProgress(productId, progressId);
+};
 ```
 
-## Step 5: Adding Middleware
+## Step 6: Creating a Basic API Endpoint
+
+Let's create a complete product API endpoint from scratch:
+
+**1. Create the handler** at `src/server/handler/product.handler.ts`
+**2. Create the service** at `src/server/service/product.service.ts`
+**3. Create the repository** at `src/server/repository/product.repository.ts`
+**4. Create the router** at `src/server/router/product/index.ts`
+
+This is already done in the template! Follow the same pattern for new endpoints.
+
+## Step 7: Adding Middleware
 
 Middleware lets you run code before every request. Perfect for logging, authentication, or adding context.
 
@@ -362,22 +572,24 @@ export const GET = ({ user }: any) => {
 - Return an object to add properties to the handler context
 - Throw errors to reject requests early (before hitting handlers)
 
-## Step 6: Error Handling
+## Step 8: Error Handling
 
 ### Basic Error Handling
 
-The simplest way to handle errors is to throw:
+The simplest way to handle errors is to throw in your service layer:
 
 ```typescript
-export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
-  const id = parseInt(params.id);
-  const product = store.products.find(p => p.id === id);
-  
-  if (!product) {
-    throw new Error('Product not found');
+// Service layer
+export const productService = {
+  getProduct(id: number): ProductResponse.GetById {
+    const product = productRepository.getProductById(id);
+    
+    if (!product) {
+      throw new Error('Product not found');
+    }
+    
+    return { product };
   }
-  
-  return { product };
 };
 ```
 
@@ -385,30 +597,25 @@ export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
 
 ### Input Validation
 
-Validate request data before processing:
+Validate request data in the service before processing:
 
 ```typescript
-export const POST = ({ body }: any): ProductAPI.CreateResponse => {
-  const req = body as ProductAPI.CreateRequest;
-  
-  // Validate required fields
-  if (!req.name || !req.price) {
-    throw new Error('name and price are required');
+// Service layer
+export const productService = {
+  createProduct(data: ProductRequest.Create): ProductResponse.Create {
+    // Validate required fields
+    if (!data.name || !data.price) {
+      throw new Error('name and price are required');
+    }
+    
+    // Validate data types
+    if (typeof data.price !== 'number' || data.price <= 0) {
+      throw new Error('price must be a positive number');
+    }
+    
+    const created = productRepository.createProduct(data);
+    return { created };
   }
-  
-  // Validate data types
-  if (typeof req.price !== 'number' || req.price <= 0) {
-    throw new Error('price must be a positive number');
-  }
-  
-  // Create product...
-  const newProduct = {
-    id: Math.max(...store.products.map(p => p.id), 0) + 1,
-    ...req
-  };
-  store.products.push(newProduct);
-  
-  return { created: newProduct };
 };
 ```
 
@@ -444,96 +651,154 @@ export const GET = ({ params }: any) => {
 
 ## Best Practices
 
-### Routing & Structure
-✅ One `index.ts` file per route endpoint  
-✅ Use `[paramName]` directories for dynamic segments  
-✅ Group related endpoints in nested directories  
-✅ Keep route hierarchy shallow (3-4 levels max)  
+### Clean Architecture Layers
 
-### Type Safety
-✅ Define request/response types in `src/shared/api.ts`  
-✅ Use TypeScript interfaces for all handlers  
-✅ Cast `body` to typed request interfaces  
-✅ Return typed response objects  
+✅ **Router** — Thin entry points
+- Import handler functions
+- Minimal parameter extraction
+- Delegate all logic to handlers
+
+✅ **Handler** — HTTP request entry points  
+- Parse params and body
+- Call service methods
+- Return service responses
+
+✅ **Service** — Business logic
+- Contains core application logic
+- Calls repository methods
+- Formats responses to API contracts
+- Can be tested without HTTP context
+
+✅ **Repository** — Data access
+- Abstracts store/database access
+- Provides clean CRUD interface
+- Only layer that touches the store
+
+✅ **Database/Store** — Persistence
+- Only accessed through repository layer
+- Simple data structures
+- No business logic
 
 ### Code Organization
-✅ Keep business logic in the store or service layer  
-✅ Handlers should be thin — validate, call store, return  
-✅ Extract reusable logic into separate functions  
-✅ Use middleware for cross-cutting concerns  
 
-### Error Handling
-✅ Validate input early and throw descriptive errors  
-✅ Use custom Response objects for specific status codes  
-✅ Return consistent error response shapes  
-✅ Log errors for debugging (use middleware)  
+✅ **DO:**
+- Keep handlers thin and focused
+- Put business logic in services
+- Abstract data access in repositories
+- Use middleware for cross-cutting concerns
+- Keep validation in the service layer
+
+❌ **DON'T:**
+- Write business logic in handlers
+- Access store directly from handlers or services
+- Put HTTP-specific code in business logic
+- Mix concerns in a single file
+- Create deeply nested routes (3-4 levels max)  
 
 ## Quick Reference
 
-### Creating a New Endpoint
+### Creating a New Endpoint (Complete Flow)
 
-```bash
-# 1. Create the directory structure
-mkdir -p src/server/router/users
-
-# 2. Create the handler file
-touch src/server/router/users/index.ts
-```
+**1. Create repository layer** at `src/server/repository/users.repository.ts`
 
 ```typescript
-// 3. Implement the handlers
-import { store } from '../../store';
+import { store } from '../db/store';
 
-export const GET = () => {
-  return { users: store.users };
-};
-
-export const POST = ({ body }: any) => {
-  const newUser = { id: Date.now(), ...body };
-  store.users.push(newUser);
-  return { created: newUser };
+export const userRepository = {
+  getAllUsers() {
+    return store.users;
+  },
+  
+  getUserById(id: number) {
+    return store.users.find(u => u.id === id);
+  },
+  
+  createUser(data: any) {
+    const newUser = { id: Date.now(), ...data };
+    store.users.push(newUser);
+    return newUser;
+  }
 };
 ```
 
-**Result:** Handlers are automatically available at `GET /api/users` and `POST /api/users`
+**2. Create service layer** at `src/server/service/users.service.ts`
+
+```typescript
+import { userRepository } from '../repository/users.repository';
+import { UserRequest, UserResponse } from '../../shared';
+
+export const userService = {
+  listUsers(): UserResponse.GetList {
+    return { users: userRepository.getAllUsers() };
+  },
+  
+  createUser(data: UserRequest.Create): UserResponse.Create {
+    const created = userRepository.createUser(data);
+    return { created };
+  }
+};
+```
+
+**3. Create handler layer** at `src/server/handler/users.handler.ts`
+
+```typescript
+import { userService } from '../service/users.service';
+
+export const getUsers = () => userService.listUsers();
+
+export const createUser = (body: any) => userService.createUser(body);
+```
+
+**4. Create router** at `src/server/router/users/index.ts`
+
+```typescript
+import { getUsers, createUser } from '../../handler/users.handler';
+
+export const GET = () => getUsers();
+
+export const POST = ({ body }: any) => createUser(body);
+```
+
+**Result:** 
+- `GET /api/users` — list all users
+- `POST /api/users` — create a user
 
 ### Adding Route Parameters
 
+**1. Create directory with [paramName]**
 ```bash
-# Create a parameterized route
 mkdir -p src/server/router/users/[id]
-touch src/server/router/users/[id]/index.ts
 ```
 
+**2. Create handler for detail operations** in `handler/users.handler.ts`
+
 ```typescript
-// Access the parameter
-export const GET = ({ params }: any) => {
-  const userId = parseInt(params.id);
-  const user = store.users.find(u => u.id === userId);
-  return { user };
+export const getUser = (params: any) => {
+  const id = parseInt(params.id);
+  return userService.getUser(id);
 };
 ```
 
-**Result:** Available at `GET /api/users/:id`
+**3. Create router** at `src/server/router/users/[id]/index.ts`
 
-### Building Nested Resources
+```typescript
+import { getUser } from '../../../handler/users.handler';
+
+export const GET = ({ params }: any) => getUser(params);
+```
+
+**Result:** `GET /api/users/:id`
+
+### Creating Nested Resources
+
+For `/api/users/:id/posts`, create the directory structure:
 
 ```bash
-# Create nested structure
 mkdir -p src/server/router/users/[id]/posts
 touch src/server/router/users/[id]/posts/index.ts
 ```
 
-```typescript
-// Both parent and child params available
-export const GET = ({ params }: any) => {
-  const userId = parseInt(params.id);
-  // Access user's posts
-  return { posts: store.getPostsByUserId(userId) };
-};
-```
-
-**Result:** Available at `GET /api/users/:id/posts`
+Then implement the full stack (repository → service → handler → router) for posts endpoints.
 
 ## Production Deployment
 
@@ -566,32 +831,63 @@ The single Bun process serves:
 
 ### Migrating to a Real Database
 
-Replace the in-memory store with a real database:
+The clean architecture makes database migration simple! The repository layer is the only place that touches the store:
+
+**1. Create a database client** at `src/server/db/database.ts`
 
 ```typescript
-// src/server/db.ts
 import { Database } from 'bun:sqlite';
 
-const db = new Database('myapp.db');
+export const db = new Database('myapp.db');
 
-export const dbStore = {
-  getProducts() {
+// Initialize schema
+db.exec(`
+  CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    price REAL NOT NULL
+  );
+`);
+```
+
+**2. Update the repository** to use the database instead of in-memory store:
+
+```typescript
+// src/server/repository/product.repository.ts
+import { db } from '../db/database';
+import { ProductRequest } from '../../shared';
+
+export const productRepository = {
+  getAllProducts() {
     return db.query('SELECT * FROM products').all();
   },
   
-  createProduct(data: any) {
-    return db.query('INSERT INTO products (name, price) VALUES (?, ?) RETURNING *')
-      .get(data.name, data.price);
+  getProductById(id: number) {
+    return db.query('SELECT * FROM products WHERE id = ?').get(id);
   },
   
-  updateProduct(id: number, data: any) {
-    return db.query('UPDATE products SET name = ?, price = ? WHERE id = ? RETURNING *')
+  createProduct(data: ProductRequest.Create) {
+    const result = db.query('INSERT INTO products (name, price) VALUES (?, ?) RETURNING *')
+      .get(data.name, data.price);
+    return result;
+  },
+  
+  updateProduct(id: number, data: ProductRequest.Update) {
+    const result = db.query('UPDATE products SET name = ?, price = ? WHERE id = ? RETURNING *')
       .get(data.name, data.price, id);
+    return result;
+  },
+  
+  deleteProduct(id: number): boolean {
+    const result = db.query('DELETE FROM products WHERE id = ?').run(id);
+    return result.success;
   }
 };
 ```
 
-Then update your handlers to use `dbStore` instead of the memory `store`.
+**3. No other changes needed!** — Services, handlers, and routers work exactly the same
+
+✅ This is the power of clean architecture — database migration only requires updating the repository layer!
 
 ## Troubleshooting
 
@@ -639,7 +935,7 @@ Then update your handlers to use `dbStore` instead of the memory `store`.
 **Symptom:** Type errors in handler code
 
 **Solutions:**
-- ✅ Define types in `src/shared/api.ts`
+- ✅ Define types in `src/shared.ts`
 - ✅ Cast request body: `const req = body as ProductAPI.CreateRequest`
 - ✅ Use `any` for context if needed: `({ params }: any)`
 - ✅ Install types: `bun add -d @types/bun @types/node`
@@ -651,6 +947,6 @@ Then update your handlers to use `dbStore` instead of the memory `store`.
 Now that you understand server-side API development, check out:
 
 - **[Client Guide](../client/CLIENT.md)** — Build the Vue frontend
-- **[Shared API Types](../shared/api.ts)** — Type-safe contracts between client and server
+- **[Shared API Types](../shared.ts)** — Type-safe contracts between client and server
 
 **Need help?** Open an issue on GitHub or check the documentation at [npmjs.com/package/bev-fs](https://www.npmjs.com/package/bev-fs)

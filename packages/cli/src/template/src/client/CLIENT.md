@@ -14,23 +14,65 @@ This guide will teach you how to build a modern, type-safe Vue 3 frontend that w
 
 ```
 src/client/
-├── main.ts          # App entry point with auto-route discovery
-├── index.html       # HTML template
-├── App.vue          # Root component with router-view
-├── api.ts           # Type-safe API client
-└── router/
-    ├── index.vue                    # Homepage at /
+├── main.ts              # App entry point with auto-route discovery
+├── index.html           # HTML template
+├── App.vue              # Root component with router-view
+├── components/          # Reusable Vue components
+│   ├── ProductForm.vue
+│   ├── ProductTable.vue
+│   ├── ProductDetail.vue
+│   ├── ProgressForm.vue
+│   ├── ProgressItem.vue
+│   ├── Modal.vue
+│   ├── LoadingSpinner.vue
+│   └── PageHeader.vue
+├── composables/         # Reusable logic (composables)
+│   └── useProductAPI.ts # Type-safe API calls
+├── pages/               # Page components (UI for routes)
+│   ├── Home.vue
+│   ├── Product.vue
+│   ├── ProductProgress.vue
+│   └── NotFound.vue
+├── stores/              # State management (for Pinia, if needed)
+└── router/              # Directory-based routing configuration
+    ├── index.vue                    # Homepage at / → imports Home.vue
     ├── product/
-    │   ├── index.vue                # Product list at /product
+    │   ├── index.vue                # Product list at /product → imports Product.vue
     │   └── [id]/
     │       ├── index.vue            # Product detail at /product/:id
     │       └── progress/
-    │           └── index.vue        # Progress list at /product/:id/progress
+    │           └── index.vue        # Progress list at /product/:id/progress → imports ProductProgress.vue
     └── not-found/
-        └── index.vue                # 404 page for unknown routes
+        └── index.vue                # 404 page for unknown routes → imports NotFound.vue
 ```
 
-**Key concept:** Just like the server, your folder structure defines your routes. Each page is an `index.vue` file.
+**Key concepts:**
+- **`pages/`** — Actual page component files (Home.vue, Product.vue, etc.) - these contain the page UI
+- **`router/`** — Route mapping files (index.vue files) - these import from pages/ and set up routing
+- **`components/`** — Reusable components used by pages (ProductForm, Modal, etc.)
+- **`composables/`** — Reusable logic as composables (useProductAPI for API calls)
+- **`stores/`** — Global state management (for Pinia, if needed)
+
+### The Separation: Pages vs Router
+
+**Pages** = UI components that display content  
+**Router** = Route configuration that imports and displays pages
+
+Each route file in `router/` imports its corresponding page from `pages/`:
+
+```typescript
+// src/client/router/product/index.vue
+// This is the route config for /product
+import Product from '../../pages/Product.vue';
+
+export default {
+  component: Product
+};
+```
+
+This separation keeps:
+- 📄 **`pages/`** focused on UI and component logic
+- 🗺️ **`router/`** focused on routing and navigation setup
 
 ## Getting Started
 
@@ -84,9 +126,47 @@ Your file structure automatically becomes your routes:
 - Each route needs an `index.vue` file
 - Special folder `not-found/` creates the 404 catch-all
 
-### Step 3: Building Your Root Component
+### Step 3: Understanding Pages vs Router
 
-Your `App.vue` contains the navigation and router outlet:
+**Pages** are the actual UI components that render your application interface.  
+**Router** files import and configure those pages for specific routes.
+
+#### Pages Folder (`src/client/pages/`)
+
+Each file here is a complete page component:
+
+- **Home.vue** — Homepage with product management (CRUD operations)
+- **Product.vue** — Product list/detail view
+- **ProductProgress.vue** — Progress tracking interface
+- **NotFound.vue** — 404 error page
+
+#### Router Folder (`src/client/router/`)
+
+Maps URLs to pages:
+
+```
+router/index.vue              → imports Home.vue              → route: /
+router/product/index.vue      → imports Product.vue           → route: /product
+router/product/[id]/...       → handles dynamic routes        → route: /product/:id
+router/not-found/index.vue    → imports NotFound.vue          → route: (catch-all)
+```
+
+#### Components Folder (`src/client/components/`)
+
+Reusable UI components used by pages:
+
+- **ProductForm.vue** — Form for creating/editing products
+- **ProductTable.vue** — Table displaying product list
+- **ProductDetail.vue** — Single product detail display
+- **ProgressForm.vue** — Form for progress entries
+- **ProgressItem.vue** — Single progress record display
+- **Modal.vue** — Reusable modal dialog
+- **LoadingSpinner.vue** — Loading state indicator
+- **PageHeader.vue** — Page title and navigation
+
+### Step 4: Building Your Root Component
+
+Both pages and router files work together. Your root `App.vue` contains the app shell:
 
 ```vue
 <!-- src/client/App.vue -->
@@ -144,7 +224,7 @@ In dynamic routes like `/product/:id`, you can access parameters using Vue Route
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { productAPI } from '../../../api';
-import type { Product } from '../../../shared/api';
+import type { Product } from '../../../shared';
 
 const route = useRoute();
 const product = ref<Product | null>(null);
@@ -172,7 +252,7 @@ The API client in `src/client/api.ts` provides type-safe methods to call your ba
 
 ```typescript
 // src/client/api.ts
-import type { ProductAPI } from '../shared/api';
+import type { ProductAPI } from '../shared';
 
 const BASE_URL = '/api';
 
@@ -217,7 +297,7 @@ export const productAPI = {
 **Why this approach?**
 
 ✅ **Type safety** — TypeScript knows exactly what each API returns  
-✅ **Shared types** — Same types used on server and client (`src/shared/api.ts`)  
+✅ **Shared types** — Same types used on server and client (`src/shared.ts`)  
 ✅ **Centralized** — All API calls in one file, easy to update  
 ✅ **No dependencies** — Uses native `fetch`, no axios/ky needed  
 ✅ **Autocomplete** — Your editor suggests available methods and fields
@@ -256,7 +336,7 @@ Here's a complete example of a product list page with CRUD operations:
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { productAPI } from '../../api';
-import type { Product } from '../../shared/api';
+import type { Product } from '../../shared';
 
 const products = ref<Product[]>([]);
 const loading = ref(true);
@@ -441,7 +521,7 @@ bun src/server/index.ts
 
 ### API Integration
 ✅ Centralize all API calls in `api.ts`  
-✅ Use shared types from `src/shared/api.ts`  
+✅ Use shared types from `src/shared.ts`  
 ✅ Type all API responses with TypeScript interfaces  
 ✅ Handle errors gracefully with try/catch blocks  
 
@@ -454,7 +534,7 @@ bun src/server/index.ts
 ### TypeScript
 ✅ Define prop types with `defineProps<{ ... }>()`  
 ✅ Type all refs: `ref<Product[]>([])`  
-✅ Import types from `src/shared/api.ts`  
+✅ Import types from `src/shared.ts`  
 ✅ Enable strict mode in `tsconfig.json`  
 
 ## Quick Reference
@@ -552,7 +632,7 @@ const userId = route.params.id; // The :id from /user/:id
 **Solutions:**
 - ✅ Install Volar extension in VS Code (not Vetur)
 - ✅ Define types for refs: `ref<Product | null>(null)`
-- ✅ Import types from `src/shared/api.ts`
+- ✅ Import types from `src/shared.ts`
 - ✅ Use `as` to cast: `const req = body as ProductAPI.CreateRequest`
 
 ### Styles Not Applying
@@ -582,7 +662,7 @@ const userId = route.params.id; // The :id from /user/:id
 Now that you understand frontend development, explore:
 
 - **[Server Guide](../server/SERVER.md)** — Build the API backend
-- **[Shared API Types](../shared/api.ts)** — Type-safe contracts
+- **[Shared API Types](../shared.ts)** — Type-safe contracts
 - **[Vue 3 Documentation](https://vuejs.org/)** — Deep dive into Vue
 - **[Vite Documentation](https://vitejs.dev/)** — Advanced bundling configuration
 

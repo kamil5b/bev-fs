@@ -1,11 +1,11 @@
-import type { ProductAPI, ProgressAPI } from '../shared/api';
+import { ProductResponse, ProductRequest, ProgressRequest, ProgressResponse } from '../../shared';
 
 // Shared in-memory store
 export const store = {
   products: [
     { id: 1, name: 'Product 1', price: 9.99 },
     { id: 2, name: 'Product 2', price: 19.99 }
-  ] as ProductAPI.GetListResponse['products'],
+  ] as ProductResponse.GetList['products'],
 
   // Product-scoped progress data
   productProgress: {
@@ -29,7 +29,7 @@ export const store = {
         updatedAt: new Date('2024-01-03').toISOString()
       }
     ]
-  } as Record<number, ProgressAPI.GetListResponse['progress']>,
+  } as Record<number, ProgressResponse.GetList['progress']>,
 
   // Product-scoped Progress CRUD operations
   getProgressByProductId(productId: number) {
@@ -40,7 +40,7 @@ export const store = {
     return this.getProgressByProductId(productId).find(p => p.id === id);
   },
 
-  createProgress(productId: number, data: ProgressAPI.CreateRequest) {
+  createProgress(productId: number, data: ProgressRequest.Create) {
     if (!this.productProgress[productId]) {
       this.productProgress[productId] = [];
     }
@@ -56,7 +56,7 @@ export const store = {
     return newProgress;
   },
 
-  updateProgress(productId: number, id: number, data: ProgressAPI.UpdateRequest) {
+  updateProgress(productId: number, id: number, data: ProgressRequest.Update) {
     const progress = this.getProgressById(productId, id);
     if (!progress) return null;
     
