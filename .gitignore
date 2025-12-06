@@ -11,3 +11,4 @@ bun.lock
 .vscode/
 *.iml
 .history/
+tmp/
