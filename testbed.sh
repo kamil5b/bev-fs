@@ -15,6 +15,7 @@ bun run build
 echo ""
 echo "=== Building CLI ==="
 cd "$CLI_PATH"
+rm -rf dist/template
 bun run build
 
 echo ""

@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { staticPlugin } from "@elysiajs/static";
 import path from "path";
 import fs from "fs";
+import { convertDirNameToSegment, convertPathToRoute } from "../shared/createRoute";
 
 export type ServerOptions = {
   routesDir?: string; // path to shared route defs
@@ -15,7 +16,7 @@ export type ServerOptions = {
 export async function createFrameworkServer(opts: ServerOptions = {}) {
   const port = opts.port ?? 3000;
   const staticDir = opts.staticDir ?? path.join(process.cwd(), "dist/client");
-  const apiDir = opts.apiDir ?? path.join(process.cwd(), "src/server/api");
+  const routerDir = opts.apiDir ?? path.join(process.cwd(), "src/server/router");
 
   const app = new Elysia();
 
@@ -31,55 +32,55 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
     app.use(staticPlugin({ assets: staticDir, prefix: "/" }));
   }
 
-  // Auto-register API handlers: export functions named by HTTP verb or default to handler
+  // Auto-register API handlers: directory-based routing
+  // Routes are defined by directory structure, handler must be in index.ts
+  // Example: src/server/router/product/[id]/progress/index.ts -> /api/product/:id/progress
   try {
-    if (fs.existsSync(apiDir)) {
-      const registerHandlers = async (dir: string, prefix = "") => {
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-          const full = path.join(dir, file);
+    if (fs.existsSync(routerDir)) {
+      const registerHandlers = async (dir: string, routePath = "") => {
+        const entries = fs.readdirSync(dir);
+        for (const entry of entries) {
+          const full = path.join(dir, entry);
           const stat = fs.statSync(full);
           
           if (stat.isDirectory()) {
-            // Recursively handle subdirectories
-            // Convert directory name: baseRoute.[uri] -> baseRoute/:uri
-            let dirPath = file.replace(/\[(\w+)\]/g, ":$1"); // baseRoute.[uri] -> baseRoute:uri
-            dirPath = dirPath.replace(/\[/g, "").replace(/\]/g, ""); // remove brackets if any
-            dirPath = dirPath.replace(/\./g, "/"); // baseRoute:uri -> baseRoute/:uri (convert dots to slashes)
-            await registerHandlers(full, prefix + "/" + dirPath);
-            continue;
-          }
-          
-          if (!file.endsWith(".ts") && !file.endsWith(".js")) continue;
-          
-          // dynamic import
-          const mod = await import(full);
-          
-          // Convert file name to route: baseRoute.[uri].ts -> baseRoute/:uri
-          let routePath = file.replace(/\.(t|j)sx?$/, ""); // baseRoute.[uri]
-          routePath = routePath.replace(/\[(\w+)\]/g, ":$1"); // baseRoute:uri 
-          routePath = routePath.replace(/\./g, "/"); // baseRoute/:uri
-          const route = "/api" + prefix + "/" + routePath;
-          
-          
-          if (mod.default) {
-            app.get(route, mod.default as any);
-          }
-          
-          // allow named exports: get/post/put/patch/delete
-          ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
-            // const handlerKey = verb === "DELETE" ? "delete_handler" : verb.toLowerCase();
-            const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
-            if (handler) {
-              // @ts-ignore
-              app[verb.toLowerCase()](route, handler);
-              console.log(`Registering route: ${verb} ${route} from file ${file}`);
+            // Build the route path: product/[id]/progress
+            const nextPath = routePath ? `${routePath}/${entry}` : entry;
+            
+            // Check if index.ts exists in this directory
+            const indexPath = path.join(full, "index.ts");
+            const indexPathJs = path.join(full, "index.js");
+            
+            if (fs.existsSync(indexPath) || fs.existsSync(indexPathJs)) {
+              // Register handlers from index.ts
+              const resolvedPath = fs.existsSync(indexPath) ? indexPath : indexPathJs;
+              const mod = await import(/* @vite-ignore */ resolvedPath);
+              
+              // Convert path to route: product/[id]/progress -> /product/:id/progress
+              const route = "/api" + convertPathToRoute(nextPath);
+              
+              if (mod.default) {
+                app.get(route, mod.default as any);
+              }
+              
+              // Allow named exports: GET, POST, PUT, PATCH, DELETE
+              ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
+                const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
+                if (handler) {
+                  // @ts-ignore
+                  app[verb.toLowerCase()](route, handler);
+                  console.log(`Registering route: ${verb} ${route} from ${entry}/index.ts`);
+                }
+              });
             }
-          });
+            
+            // Continue recursing for nested directories
+            await registerHandlers(full, nextPath);
+          }
         }
       };
       
-      await registerHandlers(apiDir);
+      await registerHandlers(routerDir);
     }
   } catch (e) {
     console.warn("Failed to auto-register api handlers", e);

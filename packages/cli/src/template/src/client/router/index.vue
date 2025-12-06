@@ -45,7 +45,7 @@
             <td>{{ product.name }}</td>
             <td>${{ product.price.toFixed(2) }}</td>
             <td>
-              <button @click="editProduct(product)" class="btn btn-sm">Edit</button>
+              <router-link :to="`/product/${product.id}`" class="btn btn-sm">View</router-link>
               <button @click="viewProgress(product.id)" class="btn btn-sm btn-info">Progress</button>
               <button @click="deleteProduct(product.id)" class="btn btn-sm btn-danger">Delete</button>
             </td>
@@ -141,7 +141,7 @@ async function deleteProduct(id: number) {
 }
 
 function viewProgress(productId: number) {
-  router.push(`/products/${productId}`);
+  router.push(`/product/${productId}/progress`);
 }
 </script>
 

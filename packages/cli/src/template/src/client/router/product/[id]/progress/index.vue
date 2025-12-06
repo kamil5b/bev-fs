@@ -1,120 +1,110 @@
 <template>
-  <div class="product-detail-container">
+  <div class="progress-container">
     <div class="back-button">
-      <router-link to="/">&larr; Back to Products</router-link>
+      <router-link :to="`/product/${productId}`">&larr; Back to Product</router-link>
     </div>
 
-    <h1 v-if="product">{{ product.name }}</h1>
-    <div v-else class="loading">Loading product...</div>
+    <h1>Product Progress</h1>
 
-    <div v-if="product" class="product-info">
-      <p class="price">${{ product.price.toFixed(2) }}</p>
+    <!-- Add Progress Form -->
+    <div class="form-section">
+      <h2>Add Progress</h2>
+      <form @submit.prevent="addProgress">
+        <input
+          v-model.number="progressForm.percentage"
+          type="number"
+          placeholder="Percentage (0-100)"
+          min="0"
+          max="100"
+          required
+        />
+        <select v-model="progressForm.status" required>
+          <option value="">Select status</option>
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+        </select>
+        <button type="submit" :disabled="loading">
+          {{ loading ? 'Adding...' : 'Add Progress' }}
+        </button>
+      </form>
     </div>
 
-    <!-- Progress List -->
-    <div v-if="product" class="progress-section">
-      <h2>Progress</h2>
+    <!-- Progress Table -->
+    <div class="table-section">
+      <table v-if="progressList.length > 0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Percentage</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="progress in progressList" :key="progress.id">
+            <td>{{ progress.id }}</td>
+            <td>
+              <input
+                v-if="editingId === progress.id"
+                v-model.number="editForm.percentage"
+                type="number"
+                min="0"
+                max="100"
+              />
+              <span v-else>{{ progress.percentage }}%</span>
+            </td>
+            <td>
+              <select v-if="editingId === progress.id" v-model="editForm.status">
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </select>
+              <span v-else class="status" :class="`status-${progress.status}`">
+                {{ progress.status }}
+              </span>
+            </td>
+            <td>{{ formatDate(progress.createdAt) }}</td>
+            <td>{{ formatDate(progress.updatedAt) }}</td>
+            <td class="actions">
+              <button
+                v-if="editingId === progress.id"
+                @click="saveEdit(progress.id)"
+                class="btn-save"
+              >
+                Save
+              </button>
+              <button
+                v-if="editingId === progress.id"
+                @click="cancelEdit"
+                class="btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                v-if="editingId !== progress.id"
+                @click="startEdit(progress)"
+                class="btn-edit"
+              >
+                Edit
+              </button>
+              <button
+                @click="deleteProgress(progress.id)"
+                class="btn-delete"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-      <!-- Add Progress Form -->
-      <div class="form-section">
-        <h3>Add Progress</h3>
-        <form @submit.prevent="addProgress">
-          <input
-            v-model.number="progressForm.percentage"
-            type="number"
-            placeholder="Percentage (0-100)"
-            min="0"
-            max="100"
-            required
-          />
-          <select v-model="progressForm.status" required>
-            <option value="">Select status</option>
-            <option value="pending">Pending</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-          </select>
-          <button type="submit" :disabled="loading">
-            {{ loading ? 'Adding...' : 'Add Progress' }}
-          </button>
-        </form>
-      </div>
-
-      <!-- Progress Table -->
-      <div class="table-section">
-        <table v-if="progressList.length > 0">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Percentage</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Updated</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="progress in progressList" :key="progress.id">
-              <td>{{ progress.id }}</td>
-              <td>
-                <input
-                  v-if="editingId === progress.id"
-                  v-model.number="editForm.percentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                />
-                <span v-else>{{ progress.percentage }}%</span>
-              </td>
-              <td>
-                <select v-if="editingId === progress.id" v-model="editForm.status">
-                  <option value="pending">Pending</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="failed">Failed</option>
-                </select>
-                <span v-else class="status" :class="`status-${progress.status}`">
-                  {{ progress.status }}
-                </span>
-              </td>
-              <td>{{ formatDate(progress.createdAt) }}</td>
-              <td>{{ formatDate(progress.updatedAt) }}</td>
-              <td class="actions">
-                <button
-                  v-if="editingId === progress.id"
-                  @click="saveEdit(progress.id)"
-                  class="btn-save"
-                >
-                  Save
-                </button>
-                <button
-                  v-if="editingId === progress.id"
-                  @click="cancelEdit"
-                  class="btn-cancel"
-                >
-                  Cancel
-                </button>
-                <button
-                  v-if="editingId !== progress.id"
-                  @click="startEdit(progress)"
-                  class="btn-edit"
-                >
-                  Edit
-                </button>
-                <button
-                  @click="deleteProgress(progress.id)"
-                  class="btn-delete"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-else class="empty-state">
-          No progress entries yet. Add one to get started!
-        </div>
+      <div v-else class="empty-state">
+        No progress entries yet. Add one to get started!
       </div>
     </div>
   </div>
@@ -122,15 +112,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { productAPI } from '../api';
-import type { Product, Progress, ProgressAPI } from '../../shared/api';
+import { useRoute } from 'vue-router';
+import type { Progress, ProgressAPI } from '../../../../shared/api';
 
 const route = useRoute();
-const router = useRouter();
-const productId = parseInt(route.params.productId as string);
+const productId = parseInt(route.params.id as string);
 
-const product = ref<Product | null>(null);
 const progressList = ref<Progress[]>([]);
 const loading = ref(false);
 const editingId = ref<number | null>(null);
@@ -146,21 +133,8 @@ const editForm = ref({
 });
 
 onMounted(async () => {
-  await loadProduct();
   await loadProgress();
 });
-
-async function loadProduct() {
-  try {
-    loading.value = true;
-    const res = await productAPI.getById(productId);
-    product.value = res.product;
-  } catch (error) {
-    console.error('Failed to load product', error);
-  } finally {
-    loading.value = false;
-  }
-}
 
 async function loadProgress() {
   try {
@@ -241,7 +215,7 @@ async function deleteProgress(id: number) {
     await fetch(`/api/product/${productId}/progress/${id}`, {
       method: 'DELETE'
     });
-    progressList.value = progressList.value.filter(p => p.id !== id);
+    progressList.value = progressList.value.filter((p: any) => p.id !== id);
   } catch (error) {
     console.error('Failed to delete progress', error);
   } finally {
@@ -255,7 +229,7 @@ function formatDate(dateStr: string) {
 </script>
 
 <style scoped>
-.product-detail-container {
+.progress-container {
   max-width: 900px;
   margin: 0 auto;
   padding: 20px;
@@ -277,40 +251,13 @@ function formatDate(dateStr: string) {
 
 h1 {
   color: #333;
-  margin-bottom: 10px;
+  margin-bottom: 30px;
 }
 
 h2 {
   color: #555;
-  font-size: 20px;
-  margin-top: 30px;
-  margin-bottom: 20px;
-}
-
-h3 {
-  color: #555;
   font-size: 16px;
   margin-bottom: 15px;
-}
-
-.product-info {
-  background: #f9f9f9;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 30px;
-}
-
-.price {
-  font-size: 24px;
-  font-weight: bold;
-  color: #0066cc;
-  margin: 0;
-}
-
-.loading {
-  text-align: center;
-  color: #999;
-  padding: 20px;
 }
 
 /* Form Section */
@@ -499,9 +446,5 @@ td select {
   color: #999;
   background: #f9f9f9;
   border-radius: 4px;
-}
-
-.progress-section {
-  margin-top: 30px;
 }
 </style>
