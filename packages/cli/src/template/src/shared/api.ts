@@ -46,6 +46,54 @@ export namespace ProductAPI {
   }
 }
 
+// Progress
+export interface Progress {
+  id: number;
+  productId: number;
+  percentage: number;
+  status: 'pending' | 'in-progress' | 'completed' | 'failed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export namespace ProgressAPI {
+  export interface GetListRequest {}
+  export interface GetListResponse {
+    progress: Progress[];
+  }
+
+  export interface CreateRequest {
+    productId: number;
+    percentage: number;
+    status?: 'pending' | 'in-progress' | 'completed' | 'failed';
+  }
+  export interface CreateResponse {
+    created: Progress;
+  }
+
+  export interface GetByIdRequest {
+    id: string | number;
+  }
+  export interface GetByIdResponse {
+    progress: Progress;
+  }
+
+  export interface UpdateRequest {
+    percentage?: number;
+    status?: 'pending' | 'in-progress' | 'completed' | 'failed';
+  }
+  export interface UpdateResponse {
+    updated: Progress;
+  }
+
+  export interface DeleteRequest {
+    id: string | number;
+  }
+  export interface DeleteResponse {
+    deleted: number;
+  }
+}
+
 // User
 export interface User {
   id: number;

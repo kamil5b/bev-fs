@@ -3,14 +3,18 @@
 A complete, production-ready scaffold for a reusable fullstack framework with single-host, single-port deployment. Built with Vue 3, Vite, Bun, and Elysia.
 
 **Published packages:**
-- [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v0.1.7+)
-- [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v0.1.13+)
+- [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v0.2.1+)
+- [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v0.3.10+)
 
 **Key components:**
 * `packages/framework` — server/client/shared runtime APIs
-* `packages/cli` — CLI for project scaffolding
+* `packages/cli` — CLI for project scaffolding  
 * `template-default` — starter template (bundled into CLI)
 * Single Elysia process serves frontend + API on port 3000
+* File-based routing with bracket notation: `[paramName].ts` → `:paramName`
+* Nested routing support: `product.[productId]/progress.[progressId].ts`
+* Shared data store for persistence across handlers
+* Middleware support with built-in logging
 
 ## Quickstart
 
@@ -50,6 +54,11 @@ Then open http://localhost:5173 (Vite dev) or http://localhost:3000 (server with
    bun run dev
    ```
 
+4. The CLI automatically:
+   - Copies the template to your new project
+   - Renames dotfiles (.gitignore, bunfig.toml)
+   - Initializes a git repository
+
 ## Publish framework runtime
 
 1. Build `packages/framework` and publish to NPM (or a private registry).
@@ -62,10 +71,30 @@ Then open http://localhost:5173 (Vite dev) or http://localhost:3000 (server with
 - Elysia server on **port 3000** (configurable via `PORT` env var)
 - Serves static Vue app + API routes from the same process
 - Auto-discovers API handlers from `src/server/api/`
+- File-based routing with bracket notation for parameters
+- Nested routing: `api/product.[productId]/progress.[progressId].ts` → `/api/product/:productId/progress/:progressId`
 - SPA fallback: unknown routes return `index.html` for Vue Router client-side routing
+- Shared data store: `src/server/store.ts` maintains state across all handlers
+- Middleware support: pass custom middleware functions to framework
 
 **Development mode:** `bun run dev` runs Vite (port 5173) + Elysia (port 3000) concurrently  
 **Production mode:** `bun run build && bun start` → single Bun process on port 3000
+
+## Features
+
+✅ **File-based API routing** — automatically register handlers from files  
+✅ **Nested endpoints** — organize related APIs in subdirectories  
+✅ **Shared store pattern** — persistent data across requests  
+✅ **DELETE method support** — via `delete_handler` export (JavaScript keyword workaround)  
+✅ **Middleware system** — extensible with custom logging, auth, etc.  
+✅ **Built-in logging** — request/response lifecycle tracking with timestamps  
+✅ **TypeScript ready** — full type safety from server to client  
+✅ **Single deployment** — no microservices complexity  
+
+## Documentation
+
+- [**Client Guide**](./docs/CLIENT.md) — Vue components, routing, API client
+- [**Server Guide**](./docs/SERVER.md) — API handlers, store pattern, middleware
 
 ## Publishing Updates
 

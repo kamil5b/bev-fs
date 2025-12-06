@@ -42,9 +42,10 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
           
           if (stat.isDirectory()) {
             // Recursively handle subdirectories
-            // Convert directory name: product.[id] -> product/:id
-            let dirPath = file.replace(/\[(\w+)\]/g, ":$1"); // product.[id] -> product.:id
-            dirPath = dirPath.replace(/\./g, "/"); // product.:id -> product/:id
+            // Convert directory name: baseRoute.[uri] -> baseRoute/:uri
+            let dirPath = file.replace(/\[(\w+)\]/g, ":$1"); // baseRoute.[uri] -> baseRoute:uri
+            dirPath = dirPath.replace(/\[/g, "").replace(/\]/g, ""); // remove brackets if any
+            dirPath = dirPath.replace(/\./g, "/"); // baseRoute:uri -> baseRoute/:uri (convert dots to slashes)
             await registerHandlers(full, prefix + "/" + dirPath);
             continue;
           }
@@ -54,10 +55,10 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
           // dynamic import
           const mod = await import(full);
           
-          // Convert file name to route: product.[id].ts -> /api/product/:id
-          let routePath = file.replace(/\.(t|j)sx?$/, ""); // product.[id]
-          routePath = routePath.replace(/\[(\w+)\]/g, ":$1"); // product.:id -> fix dot
-          routePath = routePath.replace(/\./g, "/"); // product/:id
+          // Convert file name to route: baseRoute.[uri].ts -> baseRoute/:uri
+          let routePath = file.replace(/\.(t|j)sx?$/, ""); // baseRoute.[uri]
+          routePath = routePath.replace(/\[(\w+)\]/g, ":$1"); // baseRoute:uri 
+          routePath = routePath.replace(/\./g, "/"); // baseRoute/:uri
           const route = "/api" + prefix + "/" + routePath;
           
           

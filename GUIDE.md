@@ -8,8 +8,8 @@ Includes:
 * `template-default` — the starter monolith template that the CLI copies
 
 **Published to npm:**
-- `bev-fs@0.1.7+` — framework runtime
-- `create-bev-fs@0.1.13+` — CLI tool
+- `bev-fs@0.2.1+` — framework runtime with middleware support
+- `create-bev-fs@0.3.10+` — CLI tool with git init and logging middleware template
 
 ---
 

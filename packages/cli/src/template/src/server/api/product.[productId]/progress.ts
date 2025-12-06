@@ -1,26 +1,16 @@
-import type { ProductAPI } from '../../../shared/api';
+import type { ProgressAPI } from '../../../shared/api';
+import { store } from '../../store';
 
 // GET /api/product/:productId/progress - list progress for a product
-export const GET = ({ params }: any) => {
+export const GET = ({ params }: any): ProgressAPI.GetListResponse => {
   const productId = parseInt(params.productId);
-  return {
-    productId,
-    progress: [
-      { id: 1, productId, stage: 'Design', percentage: 100 },
-      { id: 2, productId, stage: 'Development', percentage: 75 }
-    ]
-  };
+  return { progress: store.getProgressByProductId(productId) };
 };
 
 // POST /api/product/:productId/progress - create progress entry
-export const POST = ({ params, body }: any) => {
+export const POST = ({ params, body }: any): ProgressAPI.CreateResponse => {
   const productId = parseInt(params.productId);
-  const data = body as any;
-  return {
-    created: {
-      id: Math.random(),
-      productId,
-      ...data
-    }
-  };
+  const data = body as ProgressAPI.CreateRequest;
+  const created = store.createProgress(productId, data);
+  return { created };
 };
