@@ -9,6 +9,7 @@ export type ServerOptions = {
   staticDir?: string; // where built client lives
   port?: number;
   env?: "development" | "production";
+  middleware?: ((app: Elysia) => void)[];
 };
 
 export async function createFrameworkServer(opts: ServerOptions = {}) {
@@ -17,6 +18,13 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
   const apiDir = opts.apiDir ?? path.join(process.cwd(), "src/server/api");
 
   const app = new Elysia();
+
+  // Apply custom middleware
+  if (opts.middleware) {
+    for (const middleware of opts.middleware) {
+      middleware(app);
+    }
+  }
 
   // Static asset serving
   if (fs.existsSync(staticDir)) {
