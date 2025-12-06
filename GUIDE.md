@@ -1,150 +1,282 @@
-# bev-fs — Monolithic Framework Scaffold
+# bev-fs — Complete Framework Guide
 
-A complete, production-oriented scaffold for a reusable fullstack framework based on Vue + Vite + Bun + Elysia. Single-host, single-port deployment architecture.
+A comprehensive guide to the bev-fs framework architecture, implementation, and development workflow.
 
-Includes:
-* `packages/framework` (`bev-fs`) — the runtime (server, client, shared helpers)
-* `packages/cli` (`create-bev-fs`) — a Bun-powered CLI to scaffold new projects  
-* `packages/cli/src/template` — the starter monolith template that the CLI copies
+## Overview
 
-**Published to npm:**
-- `bev-fs@0.2.1+` — framework runtime with directory-based routing
-- `create-bev-fs@0.3.10+` — CLI tool with git init and route auto-discovery
+bev-fs is a fullstack TypeScript framework that combines Vue 3 (frontend) and Elysia (backend) with automatic route discovery and type safety. Built for developer experience and production deployment.
+
+**Package Structure:**
+* `packages/framework` (`bev-fs`) — Core runtime library
+* `packages/cli` (`create-bev-fs`) — Project scaffolding CLI
+* `packages/cli/src/template` — Starter template with examples
+
+**Current Versions:**
+- `bev-fs@0.3.3` — Framework runtime
+- `create-bev-fs@0.4.4` — CLI tool
 
 ---
 
-## File tree
+## Repository Structure
 
 ```
-bun-fullstack/
-├─ package.json
-├─ bunfig.toml
-├─ tsconfig.json
-├─ README.md
-├─ GUIDE.md
-├─ .gitignore
-├─ packages/
-│  ├─ framework/ (bev-fs)
-│  │  ├─ package.json (name: bev-fs, version: 0.1.7+)
-│  │  ├─ tsconfig.json
-│  │  ├─ dist/ (compiled output)
-│  │  │  ├─ index.js (ES modules)
-│  │  │  ├─ index.d.ts
-│  │  │  ├─ server/
-│  │  │  │  └─ createServer.js
-│  │  │  ├─ client/
-│  │  │  │  └─ createApp.js
-│  │  │  └─ shared/
-│  │  │     ├─ createRoute.js
-│  │  │     └─ types.js
-│  │  └─ src/
-│  │     ├─ index.ts
-│  │     ├─ server/
-│  │     │  └─ createServer.ts
-│  │     ├─ client/
-│  │     │  └─ createApp.ts
-│  │     └─ shared/
-│  │        ├─ createRoute.ts
-│  │        └─ types.ts
-│  └─ cli/ (create-bev-fs)
-│     ├─ package.json (name: create-bev-fs, version: 0.1.13+)
-│     ├─ tsconfig.json
-│     ├─ wrapper.js (Node.js shebang wrapper)
-│     ├─ dist/ (compiled output)
-│     │  ├─ index.js
-│     │  └─ template/ (bundled copy)
-│     └─ src/
-│        ├─ index.ts
-│        └─ template/ (source)
-├─ template-default/ (starter scaffold)
-│  ├─ package.json
-│  ├─ vite.config.ts
-│  ├─ bunfig.toml
-│  ├─ .gitignore
-│  └─ src/
-│     ├─ app/
-│     │  ├─ main.ts
-│     │  ├─ App.vue
-│     │  ├─ router.ts
-│     │  └─ pages/
-│     │     ├─ index.vue
-│     │     └─ users.vue
-│     └─ server/
-│        ├─ index.ts
-│        └─ api/
-│           └─ users.ts
-└─ dist/ (after build)
-   └─ client/ (Vite output)
+bun-fullstack/                    # Monorepo root
+├── packages/
+│   ├── framework/                # bev-fs runtime package
+│   │   ├── src/
+│   │   │   ├── server/
+│   │   │   │   └── createServer.ts    # Server factory with auto-discovery
+│   │   │   ├── client/
+│   │   │   │   └── createApp.ts       # Vue app factory with routing
+│   │   │   ├── shared/
+│   │   │   │   ├── createRoute.ts     # Route path conversion utilities
+│   │   │   │   └── types.ts           # Shared type definitions
+│   │   │   └── index.ts               # Main exports
+│   │   ├── dist/                      # Compiled output (ES modules)
+│   │   └── package.json               # v0.3.3
+│   │
+│   └── cli/                      # create-bev-fs scaffolding tool
+│       ├── src/
+│       │   ├── index.ts               # CLI entry point
+│       │   └── template/              # Starter project template
+│       │       ├── src/
+│       │       │   ├── client/        # Vue frontend example
+│       │       │   ├── server/        # Elysia backend example
+│       │       │   └── shared/        # Shared types
+│       │       ├── vite.config.ts
+│       │       ├── package.json
+│       │       ├── gitignore          # Renamed to .gitignore by CLI
+│       │       └── env.example        # Renamed to .env.example by CLI
+│       ├── dist/
+│       │   ├── index.js
+│       │   └── template/              # Bundled template (copied during build)
+│       ├── wrapper.js                 # Node.js compatibility shim
+│       └── package.json               # v0.4.4
+│
+├── docs/                         # (Optional) Additional documentation
+├── package.json                  # Workspace root config
+├── tsconfig.json                 # Shared TypeScript config
+├── README.md                     # User-facing documentation
+└── GUIDE.md                      # This file
+```
+
+### Key Components
+
+**Framework package (`bev-fs`):**
+- Exported functions for server and client setup
+- Auto-discovery logic for routes
+- Configuration loading (YAML, .env)
+- Middleware system
+- Type utilities
+
+**CLI package (`create-bev-fs`):**
+- Project scaffolding command
+- Template copying with file renaming
+- Git repository initialization
+- Dependency resolution
+
+**Template:**
+- Complete starter project
+- Example routes (client and server)
+- Type-safe API client
+- Logging middleware
+- Configuration examples
+
+---
+
+## Technical Implementation
+
+### Server-Side Route Discovery
+
+The `createFrameworkServer` function in `packages/framework/src/server/createServer.ts` implements automatic API route registration:
+
+**Process:**
+1. Read `routerDir` configuration (default: `src/server/router/`)
+2. Recursively scan directory structure
+3. Find all `index.ts` or `index.js` files
+4. Convert directory path to route path:
+   - `product/` → `/api/product`
+   - `product/[id]/` → `/api/product/:id`
+   - `product/[id]/progress/` → `/api/product/:id/progress`
+5. Import each handler file
+6. Register HTTP method exports (`GET`, `POST`, `PATCH`, `DELETE`) as Elysia handlers
+7. Apply middleware pipeline to all routes
+
+**Route conversion algorithm:**
+```typescript
+function convertPathToRoute(filePath: string): string {
+  // Strip file extension and 'index' filename
+  let routePath = filePath
+    .replace(/\.(ts|js|vue)$/, '')
+    .replace(/\/index$/, '')
+    .replace(/^\.\/router/, '');
+  
+  // Convert [param] to :param
+  routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1');
+  
+  // Ensure leading slash
+  return routePath || '/';
+}
+```
+
+### Client-Side Route Discovery
+
+The `createFrameworkApp` function in `packages/framework/src/client/createApp.ts` implements automatic page routing:
+
+**Process:**
+1. Receive `routeModules` from `import.meta.glob('./router/**/*.vue')`
+2. Filter to only `index.vue` files
+3. Convert file paths to route paths using shared conversion logic
+4. Special handling for `not-found` as 404 catch-all
+5. Create Vue Router configuration
+6. Return configured app with router
+
+**Vite integration:**
+```typescript
+// In client main.ts
+const routeModules = import.meta.glob<any>("./router/**/*.vue", { eager: true });
+const { app } = createFrameworkApp(App, { routeModules });
+```
+
+### Configuration Loading
+
+The configuration system supports multiple sources with clear precedence:
+
+**Loading order:**
+1. Check for `config.yaml.local` (highest priority)
+2. Check for `config.local.yaml`
+3. Check for `config.yaml`
+4. Check for `.env.local`
+5. Check for `.env` (lowest priority)
+
+**Format examples:**
+
+YAML:
+```yaml
+server:
+  port: 3000
+  routerDir: src/server/router
+  staticDir: dist/client
+
+database:
+  host: localhost
+  port: 5432
+  name: myapp
+```
+
+.env:
+```bash
+SERVER_PORT=3000
+SERVER_ROUTER_DIR=src/server/router
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+```
+
+**Environment injection:**
+All config values are flattened and injected into `process.env`:
+- `server.port` → `process.env.SERVER_PORT`
+- `database.host` → `process.env.DATABASE_HOST`
+- Nested structures use underscore separators
+
+### Middleware System
+
+Middleware functions receive the Elysia app instance and can:
+- Add hooks with `app.derive()`
+- Inject context properties
+- Intercept requests/responses
+- Add error handling
+
+**Example middleware:**
+```typescript
+export function createLoggingMiddleware() {
+  return (app: Elysia) => {
+    app.derive((context) => {
+      const timestamp = new Date().toISOString();
+      const method = context.request?.method || 'UNKNOWN';
+      const pathname = new URL(context.request?.url || '', 'http://localhost').pathname;
+      console.log(`[INFO] ${timestamp} - ${method} ${pathname} - ENTER`);
+      return {}; // Can return additional context properties
+    });
+  };
+}
+```
+
+### Type Sharing Pattern
+
+The `src/shared/api.ts` file contains types used by both client and server:
+
+```typescript
+// Type definition
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+// Namespace for request/response types
+export namespace ProductAPI {
+  export interface CreateRequest {
+    name: string;
+    price: number;
+  }
+  export interface CreateResponse {
+    created: Product;
+  }
+}
+```
+
+**Server usage:**
+```typescript
+import type { ProductAPI } from '../../../shared/api';
+
+export const POST = ({ body }: any): ProductAPI.CreateResponse => {
+  const req = body as ProductAPI.CreateRequest;
+  // Implementation
+};
+```
+
+**Client usage:**
+```typescript
+import type { ProductAPI } from '../shared/api';
+
+async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse> {
+  // Implementation
+}
 ```
 
 ---
 
-> The sections below contain the actual file contents. Use them to inspect, adapt, or copy into a real repository.
+## Package Implementation Details
 
----
-
-## Root `package.json`
+### Root `package.json`
 
 ```json
 {
-  "name": "bun-elysia-vue-fs-monorepo",
+  "name": "bev-fs-monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "bootstrap": "bun install",
-    "dev:example": "cd example && bun run dev",
-    "build:example": "cd example && bun run build",
-    "publish:framework": "cd packages/framework && npm publish"
+    "build:framework": "cd packages/framework && bun run build",
+    "build:cli": "cd packages/cli && bun run build",
+    "build": "bun run build:framework && bun run build:cli"
   }
 }
 ```
 
 ---
 
-## `bunfig.toml` (root)
+### Framework Package (`bev-fs`)
 
-```toml
-# Bun config - keep minimal
-
-[install]
-# configuration if needed
-```
-
----
-
-## `tsconfig.json` (root)
-
-```json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "node",
-    "composite": true,
-    "declaration": true,
-    "declarationMap": true,
-    "outDir": "dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "types": ["bun-shim"]
-  },
-  "include": ["packages/**/src", "template-default/src", "example/src"]
-}
-```
-
----
-
-## `packages/framework/package.json`
+**`packages/framework/package.json`:**
 
 ```json
 {
   "name": "bev-fs",
-  "version": "0.1.7",
+  "version": "0.3.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -166,161 +298,20 @@ bun-fullstack/
 }
 ```
 
----
+**Key points:**
+- ES module format (`"type": "module"`)
+- Only `dist/` directory published to npm
+- Peer dependencies on framework packages (Vue, Elysia)
+- TypeScript declaration files included
 
-## `packages/framework/tsconfig.json`
+### CLI Package (`create-bev-fs`)
 
-```json
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  }
-}
-```
-
----
-
-## `packages/framework/src/index.ts`
-
-```ts
-export * from "./server/createServer";
-export * from "./client/createApp";
-export * from "./shared/createRoute";
-export * from "./shared/types";
-```
-
----
-
-## `packages/framework/src/server/createServer.ts`
-
-```ts
-import { Elysia } from "elysia";
-import { staticPlugin } from "@elysiajs/static";
-import path from "path";
-import fs from "fs";
-
-export type ServerOptions = {
-  routesDir?: string; // path to shared route defs
-  apiDir?: string; // where api handlers live
-  staticDir?: string; // where built client lives
-  port?: number;
-  env?: "development" | "production";
-};
-
-export async function createFrameworkServer(opts: ServerOptions = {}) {
-  const port = opts.port ?? 3000;
-  const staticDir = opts.staticDir ?? path.join(process.cwd(), "dist/client");
-  const apiDir = opts.apiDir ?? path.join(process.cwd(), "src/server/api");
-
-  const app = new Elysia();
-
-  // Static asset serving
-  if (fs.existsSync(staticDir)) {
-    app.use(staticPlugin({ assets: staticDir, prefix: "/" }));
-  }
-
-  // Auto-register API handlers: export functions named by HTTP verb or default to handler
-  try {
-    if (fs.existsSync(apiDir)) {
-      const files = fs.readdirSync(apiDir).filter(f => f.endsWith(".ts") || f.endsWith(".js"));
-      for (const file of files) {
-        const full = path.join(apiDir, file);
-        // dynamic import
-        // note: Bun supports file:// import; adjust for environment
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const mod = await import(full);
-        if (mod.default) {
-          // mount at /api/<name>
-          const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
-          app.get(route, mod.default as any);
-        }
-        // allow named exports: get/post/put/delete
-        ["get", "post", "put", "delete"].forEach((verb) => {
-          if (mod[verb]) {
-            const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
-            // @ts-ignore
-            app[verb](route, mod[verb]);
-          }
-        });
-      }
-    }
-  } catch (e) {
-    console.warn("Failed to auto-register api handlers", e);
-  }
-
-  // SPA fallback for client-side routing
-  app.get("*", (c) => {
-    const index = path.join(staticDir, "index.html");
-    if (fs.existsSync(index)) return Bun.file(index);
-    return { message: "Server running" };
-  });
-
-  return {
-    app,
-    listen: (p = port) => app.listen(p)
-  };
-}
-```
-
----
-
-## `packages/framework/src/client/createApp.ts`
-
-```ts
-import { createApp as _createApp } from "vue";
-import { createRouter, createWebHistory } from "vue-router";
-
-export type ClientOptions = {
-  routes?: any[]; // vue-router routes
-  historyMode?: boolean;
-};
-
-export function createFrameworkApp(rootComponent: any, opts: ClientOptions = {}) {
-  const app = _createApp(rootComponent);
-
-  const routes = opts.routes ?? [];
-  const router = createRouter({
-    history: createWebHistory(),
-    routes
-  });
-
-  app.use(router);
-
-  return { app, router };
-}
-```
-
----
-
-## `packages/framework/src/shared/createRoute.ts`
-
-```ts
-export const createRoute = <T extends string>(path: T) => ({
-  path,
-  api(pathSuffix = "") {
-    return `/api${path}${pathSuffix}`;
-  }
-});
-```
-
----
-
-## `packages/framework/src/shared/types.ts`
-
-```ts
-export type Json = Record<string, unknown>;
-```
-
----
-
-## `packages/cli/package.json`
+**`packages/cli/package.json`:**
 
 ```json
 {
   "name": "create-bev-fs",
-  "version": "0.1.13",
+  "version": "0.4.4",
   "type": "module",
   "bin": {
     "create-bev-fs": "wrapper.js"
@@ -341,66 +332,15 @@ export type Json = Record<string, unknown>;
 }
 ```
 
----
+**Key points:**
+- Binary entry point via `wrapper.js` for Node.js compatibility
+- Template directory copied during build
+- Includes file copying utilities (fs-extra)
+- Git initialization on project creation
 
-## `packages/cli/src/index.ts`
+### Template Package Structure
 
-```ts
-#!/usr/bin/env bun
-
-import fs from "fs";
-import fse from "fs-extra";
-import path from "path";
-
-const root = path.resolve(process.cwd());
-const templateDir = path.join(root, "../..", "template-default");
-
-async function createProject(name: string) {
-  const dest = path.join(process.cwd(), name);
-  if (fs.existsSync(dest)) throw new Error("Destination exists");
-  await fse.copy(templateDir, dest);
-  console.log("Project scaffolded to", dest);
-  console.log("Run: cd %s && bun install && bun run dev", name);
-}
-
-async function runDev() {
-  // start unified dev: run vite in client and Bun server in watch
-  console.log("Starting unified dev (you can also run client/server separately)");
-  // simple implementation: just forward to project scripts
-}
-
-async function main(argv = process.argv.slice(2)) {
-  const cmd = argv[0];
-  if (!cmd || cmd === "help") {
-    console.log("bun-elysia-vue-fs create <name> — scaffold a new project");
-    console.log("bun-elysia-vue-fs dev — run dev (in project root)");
-    process.exit(0);
-  }
-
-  if (cmd === "create") {
-    const name = argv[1];
-    if (!name) throw new Error("missing project name");
-    await createProject(name);
-    return;
-  }
-
-  if (cmd === "dev") {
-    await runDev();
-    return;
-  }
-
-  console.log("unknown command", cmd);
-}
-
-main().catch(e => {
-  console.error(e);
-  process.exit(1);
-});
-```
-
----
-
-## `template-default/package.json`
+**`packages/cli/src/template/package.json`:**
 
 ```json
 {
@@ -431,222 +371,307 @@ main().catch(e => {
 }
 ```
 
----
-
-## `template-default/vite.config.ts`
-
-```ts
-import { defineConfig } from "vite";
-import vue from '@vitejs/plugin-vue';
-import path from 'path';
-
-export default defineConfig({
-  plugins: [vue()],
-  root: 'src/app',
-  build: {
-    outDir: '../../dist/client',
-    emptyOutDir: true
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(process.cwd(), 'src')
-    }
-  }
-});
-```
+**Included examples:**
+- Product CRUD with nested progress tracking
+- Type-safe API client
+- Logging middleware
+- Configuration examples (.env, YAML)
+- Multiple route examples (list, detail, nested)
 
 ---
 
-## `template-default/bunfig.toml`
+## Architecture Deep Dive
 
-```toml
-[watch]
-# configure watch if needed
-```
+### Deployment Model
 
----
-
-## `template-default/src/app/main.ts`
-
-```ts
-import { createApp } from 'vue';
-import App from './App.vue';
-import { router } from './router';
-
-createApp(App).use(router).mount('#app');
-```
-
----
-
-## `template-default/src/app/router.ts`
-
-```ts
-import { createRouter, createWebHistory } from 'vue-router';
-import routes from '../../routes/index';
-
-const routeEntries = Object.values(routes).map((r: any) => ({
-  path: r.path,
-  component: () => import(`./pages${r.path || '/index'}.vue`)
-}));
-
-export const router = createRouter({
-  history: createWebHistory(),
-  routes: routeEntries
-});
-```
-
----
-
-## `template-default/src/app/pages/index.vue`
-
-```vue
-<template>
-  <div>
-    <h1>Welcome to bun-elysia-vue-fs starter</h1>
-    <router-link to="/users">Users</router-link>
-  </div>
-</template>
-
-<script setup lang="ts">
-</script>
-```
-
----
-
-## `template-default/src/routes/index.ts`
-
-```ts
-export default {
-  home: { path: '/' },
-  users: { path: '/users' }
-};
-```
-
----
-
-## `template-default/src/server/index.ts`
-
-```ts
-import path from 'path';
-
-(async () => {
-  const { createFrameworkServer } = await import('bev-fs');
-  const { app, listen } = await createFrameworkServer({
-    apiDir: path.join(process.cwd(), 'src/server/api'),
-    staticDir: path.join(process.cwd(), 'dist/client'),
-    port: Number(process.env.PORT) || 3000
-  });
-
-  await listen();
-  console.log('Server listening on port', process.env.PORT || 3000);
-})();
-```
-
----
-
-## `template-default/src/server/api/users.ts`
-
-```ts
-export default () => ({ message: 'users root' });
-```
-
----
-
-## `template-default/src/types/User.ts`
-
-```ts
-export type User = {
-  id: string;
-  name: string;
-};
-```
-
----
-
-## `example/` (generated example) — not populated here but the CLI will copy `template-default` into an example directory when you run `bun-elysia-vue-fs create`.
-
----
-
-## README (root)
-
-````
-# bun-elysia-vue-fs — Monolithic framework scaffold
-
-## Quickstart (local dev)
-
-1. Bootstrap dependencies:
-
-   ```bash
-   bun install
-   # or in root: bun install (workspaces will install packages)
-````
-
-2. Build the framework packages (optional for development):
-
-   ```bash
-   bun run -w packages/framework build
-   bun run -w packages/cli build
-   ```
-
-3. Scaffold an example project using the CLI (you can run the built CLI or run the script directly):
-
-   ```bash
-   # from repository root
-   node packages/cli/dist/index.js create example-app
-   # or with bun if installed globally
-   bun run packages/cli/dist/index.js create example-app
-   ```
-
-4. Enter the generated app, install, and run dev:
-
-   ```bash
-   cd example-app
-   bun install
-   bun run dev
-   ```
-
-## Publish framework runtime
-
-1. Build `packages/framework` and publish to NPM (or a private registry).
-
-2. Users can then `bun add @bun-elysia-vue-fs/runtime` and your CLI will scaffold projects that import it.
+**Single-process, single-port architecture:**
 
 ```
+┌─────────────────────────────────────┐
+│     Elysia Server (Port 3000)       │
+├─────────────────────────────────────┤
+│  Static File Serving                │
+│  ├─ /           → index.html        │
+│  ├─ /assets/*   → JS/CSS/images     │
+│  └─ /*          → index.html (SPA)  │
+├─────────────────────────────────────┤
+│  API Routes                         │
+│  └─ /api/*      → Handler functions │
+└─────────────────────────────────────┘
+```
 
----
+**Development mode:**
+```bash
+bun run dev
+```
+- Vite dev server on port 5173 (HMR, fast refresh)
+- Elysia API server on port 3000
+- API calls proxied from Vite to Elysia
 
-## Deployment Architecture
+**Production mode:**
+```bash
+bun run build && bun start
+```
+- Single Elysia process on port 3000
+- Serves pre-built static files from `dist/client/`
+- API handlers from `src/server/router/`
+- SPA fallback for client-side routing
 
-**Single-host, single-port model:**
-- Elysia server runs on **port 3000** (configurable via `PORT` env var)
-- Serves both:
-  - Static client files from `dist/client/` (Vite build output)
-  - API endpoints from auto-discovered handlers in `src/server/router/` directory structure
-  - SPA fallback: unknown routes return `index.html` for Vue Router
-- Directory-based routing: `[paramName]` directories become `:paramName` in routes
-- Nested directories create nested routes automatically
-- No separate frontend/backend services needed
-- Scales horizontally by running multiple instances behind a load balancer
+**Scaling:**
+- Run multiple instances behind a load balancer
+- Stateless by design (use external DB/cache)
+- Environment-specific configuration via YAML/.env
 
-**Dev vs Production:**
-- **Dev**: `bun run dev` runs Vite on port 5173 (hot reload) + Elysia on 3000
-- **Production**: `bun run build && bun start` → single process on 3000
+## Core Features
 
-## Status
+### Directory-Based Routing
+- **Server routes:** `src/server/router/` structure defines API endpoints
+- **Client routes:** `src/client/router/` structure defines pages
+- **Parameter syntax:** `[paramName]` folders become `:paramName` URL segments
+- **Auto-discovery:** No manual route registration required
+- **Nested routes:** Support for arbitrary nesting levels
 
-✅ **Production-ready**
-- Tested end-to-end: `npx create-bev-fs@latest` → `bun run dev` → server + client working
+### Configuration System
+- **Multi-source:** Reads from `.env`, `.env.local`, `config.yaml`, `config.yaml.local`
+- **Precedence:** YAML > .env > defaults
+- **Auto-injection:** Config values injected into `process.env`
+- **Nested structure:** Supports hierarchical configuration with dot notation
+
+### Type Safety
+- **Shared types:** Common types in `src/shared/api.ts`
+- **End-to-end:** Same TypeScript interfaces used on server and client
+- **Auto-completion:** Full IDE support with type hints
+- **Compile-time checks:** Catch errors before runtime
+
+### Middleware System
+- **Extensible:** Add custom middleware functions
+- **Logging:** Built-in request logging middleware
+- **Context injection:** Middleware can add to handler context
+- **Order control:** Middleware runs in specified array order
+
+## Current Status
+
+✅ **Production-ready features:**
+- Full directory-based routing for client and server
+- Type-safe API contracts with shared TypeScript types
+- Configuration system with YAML and .env support
+- Middleware system with logging example
+- Single-port deployment architecture
+- Hot module replacement in development
+- Optimized production builds with Vite
 - Published to npm with proper ES modules
-- Single-deployment architecture verified
-- Directory-based routing with auto-discovery working
-- Framework: `bev-fs@0.2.1+` (npm)
-- CLI: `create-bev-fs@0.3.10+` (npm)
+- Git initialization in scaffolded projects
 
-## Recommended next steps
+🚧 **Future enhancements:**
+1. OpenAPI/Swagger documentation generation
+2. Database integration examples (Prisma, Drizzle)
+3. Authentication middleware examples (JWT, sessions)
+4. WebSocket support for real-time features
+5. Server-sent events (SSE) for streaming
+6. File upload handling utilities
+7. Rate limiting middleware
+8. GitHub Actions CI templates
 
-1. Add typed API client generator from route schemas
-2. Add middleware/hook plugin system  
-3. Add OpenAPI or tRPC for type-safe client-server communication
-4. Add GitHub Actions CI for automated releases
+---
+
+## Development Workflows
+
+### For End Users (Using Published Packages)
+
+**1. Create a new project:**
+```bash
+npx create-bev-fs@latest my-app
+cd my-app
+bun install
+```
+
+**2. Start development servers:**
+```bash
+bun run dev
+# Vite on http://localhost:5173
+# API on http://localhost:3000
+```
+
+**3. Add features:**
+
+Create a new page:
+```bash
+mkdir -p src/client/router/about
+touch src/client/router/about/index.vue
+```
+
+Create a new API endpoint:
+```bash
+mkdir -p src/server/router/users
+touch src/server/router/users/index.ts
+```
+
+Add shared types:
+```typescript
+// src/shared/api.ts
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+```
+
+**4. Build for production:**
+```bash
+bun run build
+# Outputs to dist/client/ and dist/server/
+```
+
+**5. Deploy:**
+```bash
+export SERVER_PORT=3000
+export NODE_ENV=production
+bun src/server/index.ts
+```
+
+### For Framework Contributors (This Repo)
+
+**1. Clone and setup:**
+```bash
+git clone https://github.com/kamil5b/bev-fs
+cd bun-fullstack
+bun install
+```
+
+**2. Quick test with automated script:**
+```bash
+# Builds both packages, creates testbed, and starts dev server
+./testbed.sh
+```
+
+The `testbed.sh` script automates the entire workflow:
+- Builds framework package
+- Builds CLI package
+- Creates test project in `/tmp/bun-testbed`
+- Links local framework version (not npm version)
+- Installs dependencies
+- Starts dev servers
+
+**3. Manual build (if needed):**
+```bash
+cd packages/framework
+bun run build
+
+cd ../cli
+bun run build
+cd ../..
+```
+
+**4. Manual test (alternative to testbed.sh):**
+```bash
+# Create a test project using local CLI
+node packages/cli/dist/index.js test-app
+cd test-app
+bun install
+bun run dev
+```
+
+**4. Make changes:**
+- Framework logic: Edit `packages/framework/src/`
+- CLI logic: Edit `packages/cli/src/index.ts`
+- Template: Edit `packages/cli/src/template/`
+
+**5. Rebuild after changes:**
+```bash
+cd packages/framework && bun run build && cd ../..
+cd packages/cli && bun run build && cd ../..
+```
+
+**6. Publish updates:**
+```bash
+# Update version in package.json files
+
+# Publish framework
+cd packages/framework
+npm publish
+
+# Publish CLI (includes template)
+cd ../cli
+npm publish
+```
+
+---
+
+## Common Development Tasks
+
+### Quick Testing with testbed.sh
+
+The fastest way to test your changes:
+
+```bash
+# Make changes to framework or CLI
+# Then run:
+./testbed.sh
+```
+
+This creates a fresh test environment in `/tmp/bun-testbed` with:
+- Latest built framework and CLI
+- Local framework linked (not from npm)
+- All dependencies installed
+- Dev servers running
+
+**Note:** The testbed is created in `/tmp/` so it's automatically cleaned up on system restart. Perfect for quick testing without cluttering your workspace.
+
+### Adding a New Framework Feature
+
+1. Implement in `packages/framework/src/`
+2. Export from `packages/framework/src/index.ts`
+3. Test quickly: `./testbed.sh`
+4. Update template to demonstrate usage in `packages/cli/src/template/`
+5. Rebuild CLI: `cd packages/cli && bun run build`
+6. Test again: `./testbed.sh`
+7. Update documentation
+
+### Updating the Template
+
+1. Edit files in `packages/cli/src/template/`
+2. Rebuild CLI: `cd packages/cli && bun run build`
+3. Test by creating a new project
+4. Verify all features work as expected
+
+### Testing Configuration Changes
+
+1. Edit template config files:
+   - `packages/cli/src/template/config.yaml.example`
+   - `packages/cli/src/template/env.example`
+2. Rebuild CLI to copy updated template
+3. Create test project and verify config loading
+
+### Debugging Route Discovery
+
+1. Add console.log statements in:
+   - `packages/framework/src/server/createServer.ts` (server routes)
+   - `packages/framework/src/client/createApp.ts` (client routes)
+2. Rebuild framework
+3. Check console output when starting servers
+
+---
+
+## Resources
+
+- **npm Packages:**
+  - [bev-fs](https://www.npmjs.com/package/bev-fs)
+  - [create-bev-fs](https://www.npmjs.com/package/create-bev-fs)
+
+- **Dependencies:**
+  - [Elysia](https://elysiajs.com/) — Backend framework
+  - [Vue 3](https://vuejs.org/) — Frontend framework
+  - [Vite](https://vitejs.dev/) — Build tool
+  - [Bun](https://bun.sh/) — JavaScript runtime
+
+- **Documentation:**
+  - [Server Guide](./packages/cli/src/template/src/server/SERVER.md)
+  - [Client Guide](./packages/cli/src/template/src/client/CLIENT.md)
+
+---
+
+## License
+
+MIT
 
 ```

@@ -21,6 +21,11 @@ async function createProject(name: string) {
     fs.renameSync(gitignoreSrc, path.join(dest, ".gitignore"));
   }
   
+  const envExample = path.join(dest, "env.example");
+  if (fs.existsSync(envExample)) {
+    fs.renameSync(envExample, path.join(dest, ".env.example"));
+  }
+  
   const bunfigSrc = path.join(dest, "bunfig-template.toml");
   if (fs.existsSync(bunfigSrc)) {
     fs.renameSync(bunfigSrc, path.join(dest, "bunfig.toml"));

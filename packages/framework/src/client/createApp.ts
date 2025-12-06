@@ -40,6 +40,7 @@ function discoverRoutes(modules: Record<string, any>): any[] {
     // Special case: save NotFound component for catch-all route
     if (filePath.includes("not-found") || filePath.includes("404")) {
       notFoundComponent = module.default;
+      console.log(`Registering route: 404 catch-all from ${filePath}`);
       continue;
     }
     
@@ -49,6 +50,7 @@ function discoverRoutes(modules: Record<string, any>): any[] {
     // Check for conflicting routes
     if (routePaths.has(routePath)) {
       conflictingPaths.push({ path: filePath, route: routePath });
+      console.warn(`⚠️  Duplicate route detected: ${routePath} from ${filePath}`);
     }
 
     routePaths.add(routePath);

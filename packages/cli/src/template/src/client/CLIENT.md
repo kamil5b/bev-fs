@@ -1,176 +1,329 @@
-# Client Guide — Vue + Vite Frontend
+# Client Guide — Building UIs with Vue 3
 
-The client directory contains the Vue 3 frontend application with type-safe API integration.
+This guide will teach you how to build a modern, type-safe Vue 3 frontend that works seamlessly with your bev-fs API backend.
+
+## What You'll Learn
+
+- 📁 **Directory-based routing** — Pages defined by folder structure
+- 🎨 **Vue 3 Composition API** — Modern, reactive component development
+- 🔒 **Type-safe API calls** — Full TypeScript support from server to client
+- 🎯 **Dynamic routes** — Handle URL parameters with ease
+- 🚀 **Hot module replacement** — Instant updates during development
 
 ## Directory Structure
 
 ```
 src/client/
-├── main.ts          # App entry point, auto-discovers routes
+├── main.ts          # App entry point with auto-route discovery
 ├── index.html       # HTML template
-├── App.vue          # Root component
+├── App.vue          # Root component with router-view
+├── api.ts           # Type-safe API client
 └── router/
-    ├── index.vue    # Homepage
+    ├── index.vue                    # Homepage at /
     ├── product/
-    │   ├── index.vue         # /product page
+    │   ├── index.vue                # Product list at /product
     │   └── [id]/
-    │       ├── index.vue     # /product/:id detail page
+    │       ├── index.vue            # Product detail at /product/:id
     │       └── progress/
-    │           ├── index.vue         # /product/:id/progress
-    │           └── [progressId]/
-    │               └── index.vue     # /product/:id/progress/:progressId
-    └── not-found/         # 404 catch-all page
-        └── index.vue
+    │           └── index.vue        # Progress list at /product/:id/progress
+    └── not-found/
+        └── index.vue                # 404 page for unknown routes
 ```
 
-**Key pattern:** Routes are defined by directory structure. Each route needs an `index.vue` file.
+**Key concept:** Just like the server, your folder structure defines your routes. Each page is an `index.vue` file.
 
-## Setup
+## Getting Started
 
-### `main.ts` — Entry Point with Auto-Discovery
+### Step 1: Understanding the Entry Point
+
+Your app starts in `src/client/main.ts`. Here's the magic that makes directory-based routing work:
 
 ```typescript
-import { createApp } from 'vue';
-import App from './App.vue';
+// src/client/main.ts
 import { createFrameworkApp } from 'bev-fs';
+import App from './App.vue';
 
-// Auto-discover all index.vue files in router/ directory
-const routeModules = import.meta.glob<any>('./router/**/*.vue', { eager: true });
+// Auto-discover all Vue components in router/ directory
+const routeModules = import.meta.glob<any>("./router/**/*.vue", { eager: true });
+
+console.log("Route modules from glob:", Object.keys(routeModules));
 
 const { app } = createFrameworkApp(App, { routeModules });
 app.mount('#app');
 ```
 
-**How it works:**
-- `import.meta.glob('./router/**/*.vue')` finds all `.vue` files in the router directory
-- Framework automatically converts directory structure to routes
-- `NotFound.vue` becomes catch-all route `/:pathMatch(.*)*` for 404 handling
+**What's happening:**
 
-## Routing
+1. **`import.meta.glob()`** is a Vite feature that imports all matching files
+2. **`"./router/**/*.vue"`** pattern finds all `.vue` files in the router directory
+3. **`{ eager: true }`** loads all routes immediately (not lazy-loaded)
+4. **`createFrameworkApp()`** converts your folder structure into Vue Router routes
+5. **`app.mount('#app')`** attaches the app to the DOM
 
-### Directory-Based Route Definition
+💡 **Auto-discovery benefits:**
+- No manual route configuration needed
+- Add a new page by just creating a file
+- Routes mirror your folder structure perfectly
+- `not-found/index.vue` automatically becomes your 404 page
 
-Routes are defined by the directory structure in `src/client/router/`. No manual route configuration needed.
+### Step 2: Understanding Directory-Based Routing
 
-### Navigation
+Your file structure automatically becomes your routes:
+
+| File Path | Route URL | Description |
+|-----------|-----------|-------------|
+| `router/index.vue` | `/` | Homepage |
+| `router/product/index.vue` | `/product` | Product list |
+| `router/product/[id]/index.vue` | `/product/:id` | Single product |
+| `router/product/[id]/progress/index.vue` | `/product/:id/progress` | Product progress |
+| `router/not-found/index.vue` | Any unmatched route | 404 page |
+
+**Routing rules:**
+- Folders become path segments: `product/` → `/product`
+- `[paramName]` folders become dynamic segments: `[id]` → `:id`
+- Each route needs an `index.vue` file
+- Special folder `not-found/` creates the 404 catch-all
+
+### Step 3: Building Your Root Component
+
+Your `App.vue` contains the navigation and router outlet:
 
 ```vue
+<!-- src/client/App.vue -->
 <template>
-  <nav>
-    <router-link to="/">Home</router-link>
-    <router-link to="/products">Products</router-link>
-    <router-link to="/users">Users</router-link>
-  </nav>
-  <router-view />
+  <div id="app">
+    <nav>
+      <router-link to="/">Home</router-link>
+      <router-link to="/product">Products</router-link>
+    </nav>
+    
+    <main>
+      <router-view />
+    </main>
+  </div>
 </template>
+
+<script setup lang="ts">
+// No imports needed - router-link and router-view are global
+</script>
+
+<style scoped>
+nav {
+  padding: 1rem;
+  border-bottom: 1px solid #ccc;
+}
+
+main {
+  padding: 2rem;
+}
+</style>
 ```
 
-Use `<router-link>` for navigation and `<router-view />` to render the current page.
+**Key components:**
+- `<router-link to="/path">` — Creates links (becomes `<a>` tag)
+- `<router-view />` — Renders the active page component
+- Vue Router automatically handles navigation and URL changes
 
-## API Integration
+### Step 4: Accessing Route Parameters
 
-### `api.ts` — Type-Safe API Client
-
-```typescript
-const apiBase = '/api';
-
-export const productAPI = {
-  async getAll() {
-    const res = await fetch(`${apiBase}/product`);
-    return res.json() as Promise<{ products: Product[] }>;
-  },
-  
-  async getById(id: number) {
-    const res = await fetch(`${apiBase}/product/${id}`);
-    return res.json() as Promise<Product>;
-  },
-  
-  async create(data: { name: string; price: number }) {
-    const res = await fetch(`${apiBase}/product`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return res.json() as Promise<Product>;
-  },
-  
-  async update(id: number, data: Partial<Product>) {
-    const res = await fetch(`${apiBase}/product/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return res.json() as Promise<Product>;
-  },
-  
-  async delete(id: number) {
-    return fetch(`${apiBase}/product/${id}`, { method: 'DELETE' });
-  }
-};
-
-export const userAPI = {
-  async getAll() {
-    const res = await fetch(`${apiBase}/users`);
-    return res.json() as Promise<{ users: User[] }>;
-  }
-};
-```
-
-**Key points:**
-- Namespace APIs by domain (productAPI, userAPI)
-- All methods are typed with TypeScript
-- Uses native `fetch` (no external HTTP library)
-- Centralized in one file for easy updates
-
-### Using API Client in Components
+In dynamic routes like `/product/:id`, you can access parameters using Vue Router's composables:
 
 ```vue
+<!-- src/client/router/product/[id]/index.vue -->
 <template>
-  <div>
-    <h1>Products</h1>
-    <button @click="addProduct">Add Product</button>
-    <ul>
-      <li v-for="p in products" :key="p.id">
-        {{ p.name }} — ${{ p.price }}
-        <button @click="deleteProduct(p.id)">Delete</button>
-      </li>
-    </ul>
+  <div v-if="product">
+    <h1>{{ product.name }}</h1>
+    <p>Price: ${{ product.price }}</p>
+    <router-link :to="`/product/${product.id}/progress`">
+      View Progress
+    </router-link>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { productAPI } from '../api';
+import { useRoute } from 'vue-router';
+import { productAPI } from '../../../api';
+import type { Product } from '../../../shared/api';
 
-const products = ref([]);
+const route = useRoute();
+const product = ref<Product | null>(null);
 
 onMounted(async () => {
-  const data = await productAPI.getAll();
-  products.value = data.products;
+  // Access the :id parameter
+  const id = parseInt(route.params.id as string);
+  const response = await productAPI.getById(id);
+  product.value = response.product;
 });
-
-async function addProduct() {
-  const p = await productAPI.create({
-    name: 'New Product',
-    price: 99.99
-  });
-  products.value.push(p);
-}
-
-async function deleteProduct(id) {
-  await productAPI.delete(id);
-  products.value = products.value.filter(p => p.id !== id);
-}
 </script>
 ```
 
-**Pattern:**
-- Load data in `onMounted` hook
-- Call API methods for mutations (create, update, delete)
-- Update local state after success
-- Optional: add loading/error states with refs
+**Working with parameters:**
+- `useRoute()` — Vue Router composable to access current route
+- `route.params.id` — The dynamic `:id` segment from the URL
+- `route.params` is always strings — parse numbers with `parseInt()`
+- Multiple params like `/product/:id/progress/:progressId` are all in `route.params`
 
-## Vite Configuration
+## Step 5: Type-Safe API Integration
+
+### `api.ts` — Your API Client
+
+The API client in `src/client/api.ts` provides type-safe methods to call your backend:
+
+```typescript
+// src/client/api.ts
+import type { ProductAPI } from '../shared/api';
+
+const BASE_URL = '/api';
+
+export const productAPI = {
+  async list(): Promise<ProductAPI.GetListResponse> {
+    const res = await fetch(`${BASE_URL}/product`);
+    return res.json();
+  },
+  
+  async getById(id: number): Promise<ProductAPI.GetByIdResponse> {
+    const res = await fetch(`${BASE_URL}/product/${id}`);
+    return res.json();
+  },
+  
+  async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse> {
+    const res = await fetch(`${BASE_URL}/product`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  
+  async update(id: number, data: ProductAPI.UpdateRequest): Promise<ProductAPI.UpdateResponse> {
+    const res = await fetch(`${BASE_URL}/product/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  
+  async delete(id: number): Promise<ProductAPI.DeleteResponse> {
+    const res = await fetch(`${BASE_URL}/product/${id}`, {
+      method: 'DELETE'
+    });
+    return res.json();
+  }
+};
+```
+
+**Why this approach?**
+
+✅ **Type safety** — TypeScript knows exactly what each API returns  
+✅ **Shared types** — Same types used on server and client (`src/shared/api.ts`)  
+✅ **Centralized** — All API calls in one file, easy to update  
+✅ **No dependencies** — Uses native `fetch`, no axios/ky needed  
+✅ **Autocomplete** — Your editor suggests available methods and fields
+  }
+};
+```
+
+### Step 6: Building Interactive Components
+
+Here's a complete example of a product list page with CRUD operations:
+
+```vue
+<!-- src/client/router/product/index.vue -->
+<template>
+  <div>
+    <h1>Products</h1>
+    
+    <div v-if="loading">Loading...</div>
+    <div v-else-if="error" class="error">{{ error }}</div>
+    
+    <div v-else>
+      <button @click="addProduct">Add Product</button>
+      
+      <ul>
+        <li v-for="p in products" :key="p.id">
+          <router-link :to="`/product/${p.id}`">
+            {{ p.name }} — ${{ p.price }}
+          </router-link>
+          <button @click="deleteProduct(p.id)">Delete</button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { productAPI } from '../../api';
+import type { Product } from '../../shared/api';
+
+const products = ref<Product[]>([]);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+onMounted(async () => {
+  try {
+    const response = await productAPI.list();
+    products.value = response.products;
+  } catch (e) {
+    error.value = 'Failed to load products';
+  } finally {
+    loading.value = false;
+  }
+});
+
+async function addProduct() {
+  try {
+    const response = await productAPI.create({
+      name: 'New Product',
+      price: 99.99
+    });
+    products.value.push(response.created);
+  } catch (e) {
+    alert('Failed to create product');
+  }
+}
+
+async function deleteProduct(id: number) {
+  if (!confirm('Delete this product?')) return;
+  
+  try {
+    await productAPI.delete(id);
+    products.value = products.value.filter(p => p.id !== id);
+  } catch (e) {
+    alert('Failed to delete product');
+  }
+}
+</script>
+
+<style scoped>
+.error {
+  color: red;
+  padding: 1rem;
+  border: 1px solid red;
+}
+
+button {
+  margin: 0.5rem;
+}
+</style>
+```
+
+**Component best practices:**
+
+✅ **Use `ref<Type>`** for reactive state with TypeScript types  
+✅ **Load data in `onMounted`** — runs once when component renders  
+✅ **Handle loading states** — show spinners while fetching data  
+✅ **Handle errors gracefully** — display user-friendly error messages  
+✅ **Update local state** — mutate reactive refs after successful API calls  
+✅ **Use `<router-link>`** for navigation instead of `<a>` tags
+
+## Development Configuration
+
+### Vite Configuration
+
+Your `vite.config.ts` at the project root configures the development server and build:
 
 ```typescript
 // vite.config.ts
@@ -193,74 +346,244 @@ export default defineConfig({
 });
 ```
 
-- **root**: Client source directory
-- **outDir**: Built assets go to dist/client (served by Elysia)
-- **alias**: `@` points to src/client for cleaner imports
+**Configuration explained:**
+
+- **`root: 'src/client'`** — Tells Vite where your client code lives
+- **`outDir: '../../dist/client'`** — Build output goes here (Elysia serves this directory)
+- **`emptyOutDir: true`** — Cleans old files before building
+- **`alias: { '@': ... }`** — Lets you import with `@/api` instead of `../../api`
+- **`plugins: [vue()]`** — Enables Vue 3 Single File Components
+
+💡 **Using the `@` alias:**
+```typescript
+// Instead of:
+import { productAPI } from '../../../api';
+
+// You can use:
+import { productAPI } from '@/api';
+```
 
 ## Build & Deploy
 
-### Development
+### Development Mode
+
+Run the full stack in development:
 
 ```bash
+# Run both client and server concurrently
 bun run dev
 ```
 
-Runs Vite dev server on port 5173 with hot reload. Elysia backend runs on port 3000.
+This starts:
+- 📦 **Vite dev server** on `http://localhost:5173` (hot reload, fast refresh)
+- 🔌 **Elysia API server** on `http://localhost:3000`
+
+**During development:**
+- Navigate to `http://localhost:5173` in your browser
+- API calls to `/api/*` proxy to the backend at port 3000
+- Changes to `.vue` files hot-reload instantly
+- Changes to server files require manual restart (or use `--watch` flag)
 
 ### Production Build
 
+Build optimized assets:
+
 ```bash
+# Build only the client
 bun run build:client
+
+# Or build both client and server
+bun run build
 ```
 
-Produces optimized assets in `dist/client/`:
-- Minified HTML, CSS, JavaScript
-- Asset hashing for cache busting
-- Source maps (optional)
+**Build output** (`dist/client/`):
+- ✅ Minified HTML, CSS, JavaScript
+- ✅ Tree-shaken dependencies (smaller bundles)
+- ✅ Asset hashing for cache busting (`app.a3f2b8.js`)
+- ✅ Optimized images and fonts
+- ✅ Source maps for debugging (optional)
 
-### Serving
+### Deployment
 
-In production, Elysia serves the built `dist/client/` directory statically and falls back to `index.html` for client-side routing.
+In production, the Elysia server serves your built frontend:
+
+```bash
+# Start production server
+export SERVER_PORT=3000
+bun src/server/index.ts
+```
+
+**How it works:**
+1. Elysia serves static files from `dist/client/`
+2. API requests to `/api/*` hit your server handlers
+3. Unknown routes return `index.html` (enables client-side routing)
+4. Vue Router handles navigation on the client
+
+**Single-port deployment:**
+- Everything runs on port 3000
+- No CORS issues
+- No separate frontend/backend deployments
+- Perfect for containers, serverless, VPS
 
 ## Best Practices
 
-✅ **Keep API client separate** — `src/client/api.ts` is the single source of truth  
-✅ **Use composition API** — modern, cleaner Vue 3 patterns with `<script setup>`  
-✅ **Type everything** — leverage TypeScript for client-server safety  
-✅ **Organize pages** — one file per route in `pages/` directory  
-✅ **Handle loading/error states** — use `ref` and conditional rendering  
-✅ **Use router-view for layouts** — nest routers for complex UIs  
+### Component Structure
+✅ Use `<script setup>` for cleaner, more concise components  
+✅ One `index.vue` per route in the `router/` directory  
+✅ Keep components small and focused on one responsibility  
+✅ Extract reusable logic into composables (`use*.ts` files)  
 
-## Common Tasks
+### State Management
+✅ Use `ref<Type>()` for reactive state with TypeScript  
+✅ Handle `loading`, `error`, and `data` states separately  
+✅ For complex state, consider Pinia or a custom composable  
+✅ Don't mutate props — emit events to parent components  
 
-### Add a new page
+### API Integration
+✅ Centralize all API calls in `api.ts`  
+✅ Use shared types from `src/shared/api.ts`  
+✅ Type all API responses with TypeScript interfaces  
+✅ Handle errors gracefully with try/catch blocks  
 
-1. Create `src/client/pages/newpage.vue`
-2. Import in `router.ts` and add route
-3. Link from template with `<router-link to="/newpage">`
+### Performance
+✅ Lazy-load routes for faster initial load (change `eager: true` to `eager: false`)  
+✅ Use `v-if` for conditional rendering (removes from DOM)  
+✅ Use `v-show` for toggling visibility (keeps in DOM)  
+✅ Debounce user input for search/filter features  
 
-### Add a new API endpoint
+### TypeScript
+✅ Define prop types with `defineProps<{ ... }>()`  
+✅ Type all refs: `ref<Product[]>([])`  
+✅ Import types from `src/shared/api.ts`  
+✅ Enable strict mode in `tsconfig.json`  
 
-1. Add method to appropriate API object in `src/client/api.ts`
-2. Use in component with `await apiMethod()`
+## Quick Reference
 
-### Update API base URL
+### Adding a New Page
 
-Change `apiBase` in `src/client/api.ts`:
+```bash
+# 1. Create the file
+mkdir -p src/client/router/about
+touch src/client/router/about/index.vue
+```
+
+```vue
+<!-- 2. Build the component -->
+<template>
+  <div>
+    <h1>About</h1>
+    <p>This is the about page</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+// Component logic here
+</script>
+```
+
+**Result:** Page is automatically available at `/about`
+
+### Adding API Methods
+
 ```typescript
-const apiBase = process.env.API_URL || '/api';
+// Add to src/client/api.ts
+export const userAPI = {
+  async list(): Promise<UserAPI.GetListResponse> {
+    const res = await fetch(`${BASE_URL}/users`);
+    return res.json();
+  }
+};
+```
+
+### Creating Dynamic Routes
+
+```bash
+# Create a dynamic route with [paramName]
+mkdir -p src/client/router/user/[id]
+touch src/client/router/user/[id]/index.vue
+```
+
+```vue
+<!-- Access the parameter -->
+<script setup lang="ts">
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
+const userId = route.params.id; // The :id from /user/:id
+</script>
 ```
 
 ## Troubleshooting
 
-**MIME type error on page load**
-- Check that Vite proxy is configured correctly (should be `/api/` not `/api`)
-- Ensure backend is running on port 3000
+### Page Shows 404 in Development
 
-**Components not updating after API call**
-- Make sure you're updating `ref()` values, not reassigning
-- Use `array.push()` or `array.splice()` for reactivity
+**Symptom:** Navigate to `/product` and see "404 Not Found"
 
-**Styles not applying**
-- Check scoped style syntax: `<style scoped>`
-- Import global styles in `main.ts`
+**Solutions:**
+- ✅ Ensure file exists at `src/client/router/product/index.vue`
+- ✅ Check that `routeModules` is passed to `createFrameworkApp()`
+- ✅ Restart Vite dev server (`Ctrl+C` and `bun run dev`)
+- ✅ Check browser console for route registration logs
+
+### API Calls Returning 404
+
+**Symptom:** `fetch('/api/product')` returns 404
+
+**Solutions:**
+- ✅ Ensure backend server is running (`bun src/server/index.ts`)
+- ✅ Check API endpoint exists in `src/server/router/`
+- ✅ Verify API path matches: `/api/product` not `/product`
+- ✅ Check server console for route registration logs
+
+### Component Not Updating After API Call
+
+**Symptom:** UI doesn't reflect new data after fetch
+
+**Solutions:**
+- ✅ Use `ref()` for reactive data: `const products = ref<Product[]>([])`
+- ✅ Update ref values correctly: `products.value = newData`
+- ✅ Don't reassign refs: Use `products.value.push()` not `products.value = [...products.value, item]`
+- ✅ Ensure data is wrapped in `ref()` or `reactive()`
+
+### TypeScript Errors in Components
+
+**Symptom:** Red squiggles, type errors in `.vue` files
+
+**Solutions:**
+- ✅ Install Volar extension in VS Code (not Vetur)
+- ✅ Define types for refs: `ref<Product | null>(null)`
+- ✅ Import types from `src/shared/api.ts`
+- ✅ Use `as` to cast: `const req = body as ProductAPI.CreateRequest`
+
+### Styles Not Applying
+
+**Symptom:** CSS in `<style>` block doesn't affect the component
+
+**Solutions:**
+- ✅ Use `<style scoped>` to scope styles to component
+- ✅ Remove `scoped` if you want global styles
+- ✅ Check CSS selector specificity
+- ✅ Import global styles in `main.ts`
+
+### Hot Reload Not Working
+
+**Symptom:** Changes don't appear without manual refresh
+
+**Solutions:**
+- ✅ Check Vite dev server is running
+- ✅ Look for errors in terminal or browser console
+- ✅ Try hard refresh: `Ctrl+Shift+R` or `Cmd+Shift+R`
+- ✅ Restart Vite dev server
+
+---
+
+## Next Steps
+
+Now that you understand frontend development, explore:
+
+- **[Server Guide](../server/SERVER.md)** — Build the API backend
+- **[Shared API Types](../shared/api.ts)** — Type-safe contracts
+- **[Vue 3 Documentation](https://vuejs.org/)** — Deep dive into Vue
+- **[Vite Documentation](https://vitejs.dev/)** — Advanced bundling configuration
+
+**Need help?** Check [npmjs.com/package/bev-fs](https://www.npmjs.com/package/bev-fs) or open a GitHub issue.

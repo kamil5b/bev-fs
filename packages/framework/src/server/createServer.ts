@@ -2,11 +2,158 @@ import { Elysia } from "elysia";
 import { staticPlugin } from "@elysiajs/static";
 import path from "path";
 import fs from "fs";
-import { convertDirNameToSegment, convertPathToRoute } from "../shared/createRoute";
+import { convertPathToRoute } from "../shared/createRoute";
+
+/**
+ * Helper to load config from .env file
+ * Checks in order: .env.local, .env
+ */
+export function loadConfigFromDotEnv() {
+  const cwd = process.cwd();
+  const envFiles = [".env.local", ".env"];
+  const config: any = {};
+  
+  for (const envFile of envFiles) {
+    const envPath = path.join(cwd, envFile);
+    
+    if (!fs.existsSync(envPath)) {
+      continue;
+    }
+    
+    try {
+      const envContent = fs.readFileSync(envPath, "utf-8");
+      for (const line of envContent.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        
+        const [key, ...rest] = trimmed.split("=");
+        if (key) {
+          const value = rest.join("=").trim().replace(/^["']|["']$/g, "");
+          // Convert env vars to nested config structure
+          // e.g., SERVER_ROUTER_DIR -> config.server.routerDir
+          const parts = key.toLowerCase().split("_");
+          if (parts.length >= 2) {
+            const section = parts[0];
+            const keyName = parts.slice(1).join("_");
+            if (!config[section]) config[section] = {};
+            config[section][keyName] = value;
+          }
+        }
+      }
+      
+      // Found a file, don't check others
+      break;
+    } catch (e) {
+      console.warn(`Failed to load ${envFile}:`, e);
+    }
+  }
+  
+  return config;
+}
+
+/**
+ * Helper to load config from YAML file
+ * Checks in order: config.yaml.local, config.local.yaml, config.yaml
+ */
+export function loadConfigFromYAML() {
+  const cwd = process.cwd();
+  const yamlFiles = ["config.yaml.local", "config.local.yaml", "config.yaml"];
+  const config: any = {};
+  
+  for (const yamlFile of yamlFiles) {
+    const configPath = path.join(cwd, yamlFile);
+    
+    if (!fs.existsSync(configPath)) {
+      continue;
+    }
+    
+    try {
+      const content = fs.readFileSync(configPath, "utf-8");
+      let currentSection = "";
+      
+      for (const line of content.split("\n")) {
+        const trimmed = line.trim();
+        
+        // Skip comments and empty lines
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        
+        // Section headers (e.g., "server:")
+        if (trimmed.endsWith(":") && trimmed.indexOf(":") === trimmed.length - 1) {
+          currentSection = trimmed.slice(0, -1);
+          if (!config[currentSection]) {
+            config[currentSection] = {};
+          }
+          continue;
+        }
+        
+        // Key-value pairs (e.g., "  routerDir: src/server/router")
+        if (trimmed.includes(":")) {
+          const [key, ...rest] = trimmed.split(":");
+          const value = rest.join(":").trim();
+          
+          if (currentSection) {
+            config[currentSection][key.trim()] = value;
+          } else {
+            config[key.trim()] = value;
+          }
+        }
+      }
+      
+      // Found a file, don't check others
+      break;
+    } catch (e) {
+      console.warn(`Failed to load ${yamlFile}:`, e);
+    }
+  }
+  
+  return config;
+}
+
+/**
+ * Helper to load config from both config.yaml and .env files
+ * Precedence: config.yaml > .env > defaults
+ */
+export function loadConfig() {
+  // Load .env first
+  const envConfig = loadConfigFromDotEnv();
+  
+  // Load config.yaml (overrides .env)
+  const yamlConfig = loadConfigFromYAML();
+  
+  // Merge: yaml overrides env
+  const merged: any = JSON.parse(JSON.stringify(envConfig));
+  
+  for (const section in yamlConfig) {
+    if (!merged[section]) {
+      merged[section] = {};
+    }
+    Object.assign(merged[section], yamlConfig[section]);
+  }
+  
+  return merged;
+}
+
+/**
+ * Inject config values into process.env for global access
+ * Recursively flattens nested config: config.server.db.host -> process.env.SERVER_DB_HOST
+ */
+export function injectConfigToEnv(config: any, prefix = "") {
+  for (const key in config) {
+    const value = config[key];
+    const envKey = prefix ? `${prefix}_${key.toUpperCase()}` : key.toUpperCase();
+    
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      // Recursively handle nested objects
+      injectConfigToEnv(value, envKey);
+    } else {
+      // Set scalar values (string, number, boolean, null, arrays)
+      process.env[envKey] = Array.isArray(value) ? JSON.stringify(value) : String(value);
+    }
+  }
+}
 
 export type ServerOptions = {
-  routesDir?: string; // path to shared route defs
-  apiDir?: string; // where api handlers live
+  routerDir?: string; // where API handlers are organized (directory-based routing)
   staticDir?: string; // where built client lives
   port?: number;
   env?: "development" | "production";
@@ -14,9 +161,16 @@ export type ServerOptions = {
 };
 
 export async function createFrameworkServer(opts: ServerOptions = {}) {
-  const port = opts.port ?? 3000;
-  const staticDir = opts.staticDir ?? path.join(process.cwd(), "dist/client");
-  const routerDir = opts.apiDir ?? path.join(process.cwd(), "src/server/router");
+  // Load config from config.yaml and .env
+  const config = loadConfig();
+  const serverConfig = config.server || {};
+  
+  // Inject config into process.env for global access
+  injectConfigToEnv(config);
+  
+  const port = opts.port ?? parseInt(serverConfig.port) ?? 3000;
+  const staticDir = opts.staticDir ?? serverConfig.static_dir ?? path.join(process.cwd(), "dist/client");
+  const routerDir = opts.routerDir ?? serverConfig.router_dir ?? path.join(process.cwd(), "src/server/router");
 
   const app = new Elysia();
 

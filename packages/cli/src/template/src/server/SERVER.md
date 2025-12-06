@@ -1,6 +1,14 @@
-# Server Guide — Elysia API Backend
+# Server Guide — Building APIs with bev-fs
 
-The server directory contains the API handlers, middleware, and shared data store.
+This guide will teach you how to build type-safe API endpoints using the bev-fs framework. You'll learn about directory-based routing, middleware, data persistence, and best practices.
+
+## What You'll Learn
+
+- 📁 **Directory-based routing** — Routes defined by folder structure, not configuration
+- 🔧 **Type-safe handlers** — Full TypeScript support from request to response
+- 🗄️ **Data persistence** — Using the shared store pattern
+- 🪝 **Middleware** — Adding logging, auth, and custom behavior
+- 🎯 **Nested routes** — Building complex API hierarchies
 
 ## Directory Structure
 
@@ -10,8 +18,6 @@ src/server/
 ├── middleware.ts     # Logging middleware factory
 ├── store.ts          # Shared in-memory data store
 └── router/
-    ├── users/
-    │   └── index.ts                  # GET/POST /api/users
     └── product/
         ├── index.ts                  # GET/POST /api/product
         └── [id]/
@@ -22,168 +28,264 @@ src/server/
                     └── index.ts      # GET/PATCH/DELETE /api/product/:id/progress/:progressId
 ```
 
-**Key pattern:** Routes are defined by directory structure. Each route endpoint must be in an `index.ts` file.
+**Key concept:** Your folder structure IS your API routing structure. Each route location needs an `index.ts` file to handle requests.
 
-## Entry Point
+## Getting Started
 
-### `index.ts` — Server Startup
+### Step 1: Server Entry Point
+
+The server starts in `src/server/index.ts`. Here's how to set it up:
 
 ```typescript
 import path from 'path';
+import { createLoggingMiddleware } from './middleware';
 
 (async () => {
   const { createFrameworkServer } = await import('bev-fs');
   const { app, listen } = await createFrameworkServer({
     routerDir: path.join(process.cwd(), 'src/server/router'),
     staticDir: path.join(process.cwd(), 'dist/client'),
-    port: Number(process.env.PORT) || 3000
+    port: Number(process.env.SERVER_PORT) || 3000,
+    middleware: [createLoggingMiddleware()]
   });
 
   await listen();
-  console.log('Server listening on port', process.env.PORT || 3000);
+  console.log('Server listening on port', process.env.SERVER_PORT || 3000);
 })();
 ```
 
-**Options:**
-- `routerDir` — directory to auto-scan for API route handlers (default: `src/server/router`)
-- `staticDir` — where built client files are (Vite output)
-- `port` — server port (default 3000)
+**Configuration Options:**
+- `routerDir` — Where your API handlers live (default: `src/server/router`)
+- `staticDir` — Built client files from Vite (default: `dist/client`)
+- `port` — Server port (reads from `SERVER_PORT` env var or defaults to 3000)
+- `middleware` — Array of middleware functions to apply
 
-## Data Persistence
+💡 **Tip:** The `routerDir` and `staticDir` options are optional. If omitted, the framework uses sensible defaults based on your working directory.
 
-### `store.ts` — Shared In-Memory Store
+## Step 2: Understanding Data Persistence
+
+The `store.ts` file provides a simple in-memory database for development. Here's how it works:
 
 ```typescript
 // src/server/store.ts
+import type { Product, Progress } from '../shared/api';
+
+const products: Product[] = [
+  { id: 1, name: 'Product 1', price: 9.99 },
+  { id: 2, name: 'Product 2', price: 19.99 }
+];
+
+const progress: Progress[] = [];
+
 export const store = {
-  products: [
-    { id: 1, name: 'Product 1', price: 9.99 },
-    { id: 2, name: 'Product 2', price: 19.99 }
-  ]
+  products,
+  
+  getProgressByProductId(productId: number) {
+    return progress.filter(p => p.productId === productId);
+  },
+  
+  createProgress(productId: number, data: any) {
+    const newProgress = {
+      id: Math.max(...progress.map(p => p.id), 0) + 1,
+      productId,
+      percentage: data.percentage,
+      status: data.status || 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    progress.push(newProgress);
+    return newProgress;
+  }
 };
 ```
 
-**Why shared store?**
-- All API handlers import the same `store` object reference
-- Modifications persist across requests
-- Simple for demos; use a database in production
+**Why use a shared store?**
+- ✅ All API handlers import the same object reference
+- ✅ Modifications persist across requests within the same process
+- ✅ Perfect for demos and rapid prototyping
+- ⚠️ Data is lost when the server restarts
+- ⚠️ Not suitable for production (use a real database)
 
-**Key pattern:** handlers modify `store.products` directly, so DELETE/PATCH operations persist.
+**Key pattern:** Export a singleton object that all handlers can import and mutate directly.
 
-## Directory-Based Routing
+## Step 3: Understanding Directory-Based Routing
 
-API handlers are auto-discovered from `src/server/router/`. Directory structure is converted to routes. Each route must have an `index.ts` file:
+The magic of bev-fs is that your folder structure defines your API routes. No configuration needed!
 
-| Directory | Route |
-|-----------|----------|
-| `router/users/index.ts` | `/api/users` |
-| `router/product/index.ts` | `/api/product` |
-| `router/product/[id]/index.ts` | `/api/product/:id` |
-| `router/product/[id]/progress/index.ts` | `/api/product/:id/progress` |
-| `router/product/[id]/progress/[progressId]/index.ts` | `/api/product/:id/progress/:progressId` |
+### How It Works
 
-**Naming conventions:**
-- Directories in `router/` become `/api/` routes with `/` as prefix
-- `[paramName]` directory → `:paramName` in route path
-- Nested directories create nested routes
-- Each route location must have an `index.ts` or `index.js` file
-- Only the parameter name matters: `[id]`, `[progressId]`, etc. — not the file name
+1. Place an `index.ts` file in any folder under `src/server/router/`
+2. The framework automatically creates an API route at `/api/<folder-path>`
+3. Use `[paramName]` folders to create dynamic route parameters
 
-## API Handlers
+### Route Mapping Examples
 
-### Basic Handler — `router/product/index.ts`
+| File Path | Generated API Route | Description |
+|-----------|---------------------|-------------|
+| `router/product/index.ts` | `GET /api/product` | List all products |
+| `router/product/[id]/index.ts` | `GET /api/product/:id` | Get product by ID |
+| `router/product/[id]/progress/index.ts` | `GET /api/product/:id/progress` | Get progress for a product |
+| `router/product/[id]/progress/[progressId]/index.ts` | `GET /api/product/:id/progress/:progressId` | Get specific progress entry |
+
+### Routing Rules
+
+✅ **DO:**
+- Create an `index.ts` (or `index.js`) in each route directory
+- Use `[paramName]` syntax for dynamic segments (e.g., `[id]`, `[progressId]`)
+- Nest directories to create hierarchical routes
+- Export uppercase HTTP method names: `GET`, `POST`, `PATCH`, `DELETE`
+
+❌ **DON'T:**
+- Put handlers in files other than `index.ts` (they won't be registered)
+- Use lowercase method names (use `DELETE` not `delete`)
+- Rely on filename for routing (only directory structure matters)
+
+## Step 4: Writing Your First API Handler
+
+### Creating a Basic Endpoint
+
+Let's create a handler at `src/server/router/product/index.ts` that lists and creates products:
 
 ```typescript
 // src/server/router/product/index.ts
 import { store } from '../../store';
-import type { ProductAPI } from '../../shared/api';
+import type { ProductAPI } from '../../../shared/api';
 
-export const GET = (): ProductAPI.GetAllResponse => ({
-  products: store.products
-});
+// GET /api/product - List all products
+export const GET = (): ProductAPI.GetListResponse => {
+  return { products: store.products };
+};
 
-export const POST = ({ body }: any): ProductAPI.Product => {
-  const newId = Math.max(...store.products.map(p => p.id), 0) + 1;
-  const product = { id: newId, ...body };
-  store.products.push(product);
-  return product;
+// POST /api/product - Create a new product
+export const POST = ({ body }: any): ProductAPI.CreateResponse => {
+  const req = body as ProductAPI.CreateRequest;
+  const newProduct = {
+    id: Math.max(...store.products.map(p => p.id), 0) + 1,
+    ...req
+  };
+  store.products.push(newProduct);
+  return { created: newProduct };
 };
 ```
 
-**Exports:**
-- `GET`, `POST`, `PUT`, `PATCH`, `DELETE` — named by HTTP method (uppercase)
-- `DELETE` instead of `delete_handler` (uppercase naming convention)
-- Functions receive Elysia context as parameter
-- Type responses using shared API types from `src/shared/api.ts`
+**What's happening here:**
 
-### Parametrized Handler — `router/product/[id]/index.ts`
+1. **Import the store** — Access your shared data
+2. **Import types** — Use TypeScript types from `shared/api.ts` for type safety
+3. **Export HTTP methods** — Each export corresponds to an HTTP verb (must be UPPERCASE)
+4. **Destructure context** — `{ body }` gives you the request body
+5. **Return typed responses** — The return type matches your API contract
+
+💡 **Handler Anatomy:**
+- Each handler receives Elysia context: `{ body, params, query, request, headers, ... }`
+- Return value is automatically JSON-serialized
+- Thrown errors become HTTP 500 responses with error messages
+
+### Working with Route Parameters
+
+Create `src/server/router/product/[id]/index.ts` to handle individual products:
 
 ```typescript
 // src/server/router/product/[id]/index.ts
 import { store } from '../../../store';
-import type { ProductAPI } from '../../../shared/api';
+import type { ProductAPI } from '../../../../shared/api';
 
-export const GET = ({ params }: any): ProductAPI.Product => {
-  const product = store.products.find(p => p.id === +params.id);
-  if (!product) throw new Error('Not found');
-  return product;
+// GET /api/product/:id - Get a specific product
+export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
+  const id = parseInt(params.id);
+  const product = store.products.find(p => p.id === id);
+  if (!product) throw new Error('Product not found');
+  return { product };
 };
 
-export const PATCH = ({ params, body }: any): ProductAPI.Product => {
-  const product = store.products.find(p => p.id === +params.id);
-  if (!product) throw new Error('Not found');
-  Object.assign(product, body);
-  return product;
+// PATCH /api/product/:id - Update a product
+export const PATCH = ({ params, body }: any): ProductAPI.UpdateResponse => {
+  const id = parseInt(params.id);
+  const req = body as ProductAPI.UpdateRequest;
+  const product = store.products.find(p => p.id === id);
+  
+  if (!product) throw new Error('Product not found');
+  
+  if (req.name !== undefined) product.name = req.name;
+  if (req.price !== undefined) product.price = req.price;
+  
+  return { updated: product };
 };
 
-export const DELETE = ({ params }: any) => {
-  const idx = store.products.findIndex(p => p.id === +params.id);
-  if (idx === -1) throw new Error('Not found');
-  const [deleted] = store.products.splice(idx, 1);
-  return { deleted };
+// DELETE /api/product/:id - Delete a product
+export const DELETE = ({ params }: any): ProductAPI.DeleteResponse => {
+  const id = parseInt(params.id);
+  const index = store.products.findIndex(p => p.id === id);
+  
+  if (index === -1) throw new Error('Product not found');
+  
+  store.products.splice(index, 1);
+  return { deleted: id };
 };
 ```
 
-**Access parameters:**
-- `params.id` — from `[id]` directory name (not filename)
-- `params.progressId` — from nested `[progressId]` directory
-- Parameter names match directory names exactly (case-sensitive)
-- Convert to number with `+params.id`
+**Understanding Route Parameters:**
 
-### Nested Handler — `router/product/[id]/progress/index.ts`
+- The `[id]` folder name becomes `:id` in the route
+- Access it via `params.id` in your handler
+- Parameter names must match the folder name exactly (case-sensitive)
+- Always parse string parameters: `parseInt(params.id)` or `+params.id`
+
+🔑 **Multiple Parameters:**
+For nested routes like `/api/product/:id/progress/:progressId`, you get both:
+- `params.id` (from the `[id]` folder)
+- `params.progressId` (from the `[progressId]` folder)
+
+### Building Nested Routes
+
+Create `src/server/router/product/[id]/progress/index.ts` for nested resources:
 
 ```typescript
 // src/server/router/product/[id]/progress/index.ts
 import { store } from '../../../../store';
-import type { ProgressAPI } from '../../../../shared/api';
+import type { ProgressAPI } from '../../../../../shared/api';
 
-export const GET = ({ params }: any): ProgressAPI.GetAllResponse => {
-  const product = store.products.find(p => p.id === +params.id);
-  if (!product) throw new Error('Product not found');
-  return { progresses: product.progress || [] };
+// GET /api/product/:id/progress - List progress entries for a product
+export const GET = ({ params }: any): ProgressAPI.GetListResponse => {
+  const productId = parseInt(params.id);
+  return { progress: store.getProgressByProductId(productId) };
 };
 
-export const POST = ({ params, body }: any): ProgressAPI.Progress => {
-  const product = store.products.find(p => p.id === +params.id);
-  if (!product) throw new Error('Product not found');
-  
-  if (!product.progress) product.progress = [];
-  const newId = Math.max(...product.progress.map(p => p.id), 0) + 1;
-  const progress = { id: newId, ...body, productId: product.id };
-  product.progress.push(progress);
-  return progress;
+// POST /api/product/:id/progress - Create a progress entry
+export const POST = ({ params, body }: any): ProgressAPI.CreateResponse => {
+  const productId = parseInt(params.id);
+  const data = body as ProgressAPI.CreateRequest;
+  const created = store.createProgress(productId, data);
+  return { created };
 };
 ```
 
-**Pattern:**
-- Access parent parameter: `params.id` (from `[id]` directory)
-- Access current parameter: `params.progressId` (from `[progressId]` directory if present)
-- Check parent exists before accessing child
-- Parameters come from directory names, not file paths
+**Nested Routing Pattern:**
 
-## Middleware
+1. **Parent parameters are inherited** — `params.id` comes from the `[id]` folder above
+2. **Validate parent existence** — Check the parent resource exists before creating children
+3. **Build hierarchies naturally** — Your folder structure mirrors your API design
 
-### `middleware.ts` — Logging Middleware Factory
+🎯 **Real-world example:**
+```
+router/
+└── product/
+    ├── index.ts              # GET /api/product
+    └── [id]/
+        ├── index.ts          # GET /api/product/:id
+        └── progress/
+            ├── index.ts      # GET /api/product/:id/progress
+            └── [progressId]/
+                └── index.ts  # GET /api/product/:id/progress/:progressId
+```
+
+## Step 5: Adding Middleware
+
+Middleware lets you run code before every request. Perfect for logging, authentication, or adding context.
+
+### Built-in Logging Middleware
+
+The template includes a logging middleware in `src/server/middleware.ts`:
 
 ```typescript
 // src/server/middleware.ts
@@ -207,193 +309,348 @@ export function createLoggingMiddleware() {
 ```
 
 **How it works:**
-- `app.derive()` runs on every request
-- Logs method, path, and timestamp
-- Returns empty object (doesn't modify request)
+1. `app.derive()` runs before every handler
+2. Logs the HTTP method, path, and timestamp
+3. Returns an empty object (no context modification)
 
-**Output example:**
+**Console output:**
 ```
-[INFO]  2025-12-06T08:58:22.071Z - GET /api/product - ENTER
-[INFO]  2025-12-06T08:58:37.883Z - POST /api/product - ENTER
+[INFO]  2025-12-07T10:15:22.071Z - GET /api/product - ENTER
+[INFO]  2025-12-07T10:15:37.883Z - POST /api/product - ENTER
 ```
 
-### Custom Middleware
+### Creating Custom Middleware
 
-Add your own middleware functions and pass to framework:
+Here's how to add authentication middleware:
 
 ```typescript
+// src/server/middleware.ts
 export function createAuthMiddleware() {
   return (app: Elysia) => {
     app.derive((context) => {
       const token = context.request?.headers.get('Authorization');
+      
       if (!token) {
-        throw new Error('Unauthorized');
+        throw new Error('Unauthorized: No token provided');
       }
-      return { user: verifyToken(token) };
+      
+      // Verify token and attach user to context
+      const user = verifyToken(token); // Your auth logic
+      return { user };
     });
   };
 }
 
-// In index.ts
+// Apply in index.ts
 middleware: [
   createLoggingMiddleware(),
   createAuthMiddleware()
 ]
 ```
 
-Then in handlers, access with `context.user`.
-
-## Error Handling
-
-### Throwing Errors
-
+**Using middleware context in handlers:**
 ```typescript
-export const GET = ({ params }: any) => {
-  const product = store.products.find(p => p.id === +params.id);
-  
-  // Throw for error responses
-  if (!product) throw new Error('Product not found');
-  
-  return product;
+export const GET = ({ user }: any) => {
+  // user is available from auth middleware
+  console.log(`Request from user: ${user.email}`);
+  return { data: 'secret stuff' };
 };
 ```
 
-Elysia automatically catches errors and returns HTTP 500 with error message.
+💡 **Middleware tips:**
+- Middleware runs in the order you specify in the array
+- Return an object to add properties to the handler context
+- Throw errors to reject requests early (before hitting handlers)
 
-### Validation
+## Step 6: Error Handling
 
-```typescript
-export const POST = ({ body }: any) => {
-  if (!body.name || !body.price) {
-    throw new Error('name and price are required');
-  }
-  // Create product...
-};
-```
+### Basic Error Handling
 
-### Custom Status Codes
-
-For custom status codes, return a Response object:
+The simplest way to handle errors is to throw:
 
 ```typescript
-export const GET = ({ params }: any) => {
-  const product = store.products.find(p => p.id === +params.id);
+export const GET = ({ params }: any): ProductAPI.GetByIdResponse => {
+  const id = parseInt(params.id);
+  const product = store.products.find(p => p.id === id);
   
   if (!product) {
-    return new Response(JSON.stringify({ error: 'Not found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    throw new Error('Product not found');
   }
   
-  return product;
+  return { product };
 };
 ```
+
+⚠️ **Note:** Thrown errors automatically return HTTP 500 with the error message.
+
+### Input Validation
+
+Validate request data before processing:
+
+```typescript
+export const POST = ({ body }: any): ProductAPI.CreateResponse => {
+  const req = body as ProductAPI.CreateRequest;
+  
+  // Validate required fields
+  if (!req.name || !req.price) {
+    throw new Error('name and price are required');
+  }
+  
+  // Validate data types
+  if (typeof req.price !== 'number' || req.price <= 0) {
+    throw new Error('price must be a positive number');
+  }
+  
+  // Create product...
+  const newProduct = {
+    id: Math.max(...store.products.map(p => p.id), 0) + 1,
+    ...req
+  };
+  store.products.push(newProduct);
+  
+  return { created: newProduct };
+};
+```
+
+### Custom HTTP Status Codes
+
+For specific status codes (404, 400, etc.), return a Response object:
+
+```typescript
+export const GET = ({ params }: any) => {
+  const id = parseInt(params.id);
+  const product = store.products.find(p => p.id === id);
+  
+  if (!product) {
+    return new Response(
+      JSON.stringify({ error: 'Product not found' }), 
+      {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+  
+  return { product };
+};
+```
+
+**Common HTTP status codes:**
+- `400` — Bad Request (validation errors)
+- `401` — Unauthorized (missing/invalid auth)
+- `403` — Forbidden (valid auth but no permission)
+- `404` — Not Found (resource doesn't exist)
+- `500` — Internal Server Error (unexpected errors)
 
 ## Best Practices
 
-✅ **Use directory-based routing** — organize handlers in nested `router/` directories  
-✅ **One index.ts per route** — each route location needs exactly one `index.ts` file  
-✅ **Use uppercase HTTP methods** — `GET`, `POST`, `PUT`, `PATCH`, `DELETE`  
-✅ **Match directory names to parameters** — `[id]` directory → `params.id` in handler  
-✅ **Validate and throw** — throw errors for invalid requests (Elysia handles HTTP status)  
-✅ **Use shared types** — define request/response types in `src/shared/api.ts`  
-✅ **Organize by resource** — group related endpoints in nested directories  
-✅ **Type handler context** — use `{ params, body }: any` with TypeScript comments  
-✅ **Centralize store logic** — keep data modifications in `store.ts` or database layer  
+### Routing & Structure
+✅ One `index.ts` file per route endpoint  
+✅ Use `[paramName]` directories for dynamic segments  
+✅ Group related endpoints in nested directories  
+✅ Keep route hierarchy shallow (3-4 levels max)  
 
-## Common Tasks
+### Type Safety
+✅ Define request/response types in `src/shared/api.ts`  
+✅ Use TypeScript interfaces for all handlers  
+✅ Cast `body` to typed request interfaces  
+✅ Return typed response objects  
 
-### Add a new endpoint
+### Code Organization
+✅ Keep business logic in the store or service layer  
+✅ Handlers should be thin — validate, call store, return  
+✅ Extract reusable logic into separate functions  
+✅ Use middleware for cross-cutting concerns  
 
-1. Create directory: `src/server/router/resource/`
-2. Create file: `src/server/router/resource/index.ts`
-3. Export handlers: `export const GET = () => {...}`
-4. Framework auto-registers at `/api/resource`
+### Error Handling
+✅ Validate input early and throw descriptive errors  
+✅ Use custom Response objects for specific status codes  
+✅ Return consistent error response shapes  
+✅ Log errors for debugging (use middleware)  
 
-### Add parameters
+## Quick Reference
 
-1. Create directory: `src/server/router/resource/[id]/`
-2. Create file: `src/server/router/resource/[id]/index.ts`
-3. Access in handler: `params.id`
-4. Creates route: `/api/resource/:id`
+### Creating a New Endpoint
 
-### Nest endpoints
+```bash
+# 1. Create the directory structure
+mkdir -p src/server/router/users
 
-1. Create nested directory: `src/server/router/product/[id]/progress/`
-2. Create file: `src/server/router/product/[id]/progress/index.ts`
-3. Access parent: `params.id`, access nested params from directory names
-4. Creates route: `/api/product/:id/progress`
+# 2. Create the handler file
+touch src/server/router/users/index.ts
+```
 
-### Add multiple parameters
+```typescript
+// 3. Implement the handlers
+import { store } from '../../store';
 
-1. Create nested directories with `[paramName]`
-2. Example: `router/product/[id]/progress/[progressId]/index.ts`
-3. Access both: `params.id` and `params.progressId`
+export const GET = () => {
+  return { users: store.users };
+};
+
+export const POST = ({ body }: any) => {
+  const newUser = { id: Date.now(), ...body };
+  store.users.push(newUser);
+  return { created: newUser };
+};
+```
+
+**Result:** Handlers are automatically available at `GET /api/users` and `POST /api/users`
+
+### Adding Route Parameters
+
+```bash
+# Create a parameterized route
+mkdir -p src/server/router/users/[id]
+touch src/server/router/users/[id]/index.ts
+```
+
+```typescript
+// Access the parameter
+export const GET = ({ params }: any) => {
+  const userId = parseInt(params.id);
+  const user = store.users.find(u => u.id === userId);
+  return { user };
+};
+```
+
+**Result:** Available at `GET /api/users/:id`
+
+### Building Nested Resources
+
+```bash
+# Create nested structure
+mkdir -p src/server/router/users/[id]/posts
+touch src/server/router/users/[id]/posts/index.ts
+```
+
+```typescript
+// Both parent and child params available
+export const GET = ({ params }: any) => {
+  const userId = parseInt(params.id);
+  // Access user's posts
+  return { posts: store.getPostsByUserId(userId) };
+};
+```
+
+**Result:** Available at `GET /api/users/:id/posts`
 
 ## Production Deployment
 
-### Build
+### Building for Production
 
 ```bash
+# Build client and server
 bun run build
 ```
 
-Creates:
-- `dist/client/` — built Vue app
-- Ready to serve from a Bun process
+This creates:
+- `dist/client/` — Optimized Vue SPA (HTML, CSS, JS)
+- `dist/server/` — Compiled server code (optional)
 
-### Run
+### Running in Production
 
 ```bash
-PORT=3000 bun src/server/index.ts
+# Set environment variables
+export SERVER_PORT=3000
+export NODE_ENV=production
+
+# Start the server
+bun src/server/index.ts
 ```
 
-Single process on port 3000 serves:
-- Static client files
-- API endpoints
-- SPA fallback to index.html
+The single Bun process serves:
+- ✅ Static client files at `/`
+- ✅ API endpoints at `/api/*`
+- ✅ SPA fallback for client-side routing
 
-### Database Integration
+### Migrating to a Real Database
 
-Replace in-memory `store.ts` with database calls:
+Replace the in-memory store with a real database:
 
 ```typescript
-// src/server/store.ts
-import { db } from './db'; // your database client
+// src/server/db.ts
+import { Database } from 'bun:sqlite';
 
-export const store = {
-  async getProducts() {
-    return db.products.findAll();
+const db = new Database('myapp.db');
+
+export const dbStore = {
+  getProducts() {
+    return db.query('SELECT * FROM products').all();
   },
-  async createProduct(data) {
-    return db.products.create(data);
+  
+  createProduct(data: any) {
+    return db.query('INSERT INTO products (name, price) VALUES (?, ?) RETURNING *')
+      .get(data.name, data.price);
+  },
+  
+  updateProduct(id: number, data: any) {
+    return db.query('UPDATE products SET name = ?, price = ? WHERE id = ? RETURNING *')
+      .get(data.name, data.price, id);
   }
 };
 ```
 
-Then import in handlers and use async/await.
+Then update your handlers to use `dbStore` instead of the memory `store`.
 
 ## Troubleshooting
 
-**Routes not registering**
-- Check directory is in `src/server/router/`
-- Verify `index.ts` (or `index.js`) exists in the directory
-- Ensure file contains handler exports: `GET`, `POST`, etc.
-- Framework logs route registration: `Registering route: GET /api/product/:id from id/index.ts`
+### Routes Not Registering
 
-**Parameter undefined**
-- Ensure directory name matches: `resource/[paramName]/`
-- Access as: `params.paramName` (case-sensitive)
-- Parameter names come from directory names, not file paths
-- Convert to number if needed: `+params.id`
+**Symptom:** API endpoint returns 404
 
-**DELETE not working**
-- Use uppercase `DELETE` not `delete`
-- Verify handler is exporting the function
-- Check file is in `index.ts` in the correct directory
+**Solutions:**
+- ✅ Ensure handler is in `src/server/router/` directory
+- ✅ File must be named `index.ts` (or `index.js`)
+- ✅ Export HTTP methods in UPPERCASE: `GET`, `POST`, `PATCH`, `DELETE`
+- ✅ Check server console for route registration logs: `Registering route: GET /api/product/:id`
 
-**Data not persisting**
-- Ensure all handlers import same `store` object from `store.ts`
-- Don't reassign store variables — modify in-place with mutation
-- For production, replace in-memory store with database layer
+### Parameter Coming Through as Undefined
+
+**Symptom:** `params.id` is undefined in handler
+
+**Solutions:**
+- ✅ Directory must be named `[id]` (with brackets)
+- ✅ Parameter name is case-sensitive: `[userId]` → `params.userId`
+- ✅ Remember to parse: `parseInt(params.id)` or `+params.id`
+- ✅ Parameters come from directory names, not file names
+
+### DELETE Method Not Working
+
+**Symptom:** DELETE handler not being called
+
+**Solutions:**
+- ✅ Use uppercase `DELETE` not lowercase `delete` (reserved keyword)
+- ✅ Verify function is exported: `export const DELETE = ...`
+- ✅ Check browser is sending DELETE request (not GET/POST)
+
+### Data Not Persisting
+
+**Symptom:** Changes disappear after other requests
+
+**Solutions:**
+- ✅ Import store from correct path: `import { store } from '../../store'`
+- ✅ Mutate store objects in-place, don't reassign: `store.products.push()` not `store.products = []`
+- ✅ Remember: in-memory store resets on server restart
+- ✅ For production: migrate to a database
+
+### TypeScript Errors
+
+**Symptom:** Type errors in handler code
+
+**Solutions:**
+- ✅ Define types in `src/shared/api.ts`
+- ✅ Cast request body: `const req = body as ProductAPI.CreateRequest`
+- ✅ Use `any` for context if needed: `({ params }: any)`
+- ✅ Install types: `bun add -d @types/bun @types/node`
+
+---
+
+## Next Steps
+
+Now that you understand server-side API development, check out:
+
+- **[Client Guide](../client/CLIENT.md)** — Build the Vue frontend
+- **[Shared API Types](../shared/api.ts)** — Type-safe contracts between client and server
+
+**Need help?** Open an issue on GitHub or check the documentation at [npmjs.com/package/bev-fs](https://www.npmjs.com/package/bev-fs)

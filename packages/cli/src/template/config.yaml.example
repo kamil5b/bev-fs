@@ -1,0 +1,26 @@
+# bev-fs Configuration
+# Copy this file to config.yaml and customize for your project
+
+server:
+  # Directory containing route handlers (directory-based routing)
+  # Routes are auto-discovered from directory structure
+  # Example: src/server/router/product/[id]/index.ts -> /api/product/:id
+  routerDir: src/server/router
+  
+  # Directory containing built client files (Vite output)
+  staticDir: dist/client
+  
+  # Server port
+  port: 3000
+  
+  # Environment (development or production)
+  env: development
+
+client:
+  # Directory containing route components
+  # Routes are auto-discovered from directory structure
+  # Example: src/client/router/product/[id]/index.vue -> /product/:id
+  routerDir: src/client/router
+  
+  # API base URL for fetch requests
+  apiBase: /api
