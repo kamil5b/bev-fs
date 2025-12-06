@@ -11,7 +11,7 @@
     "build": "bun run build:client && bun run build:server"
   },
   "dependencies": {
-    "bev-fs": "latest",
+    "bev-fs": "0.2.0",
     "elysia": "*",
     "@elysiajs/static": "*",
     "vue": "*",

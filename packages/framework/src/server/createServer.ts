@@ -26,27 +26,51 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
   // Auto-register API handlers: export functions named by HTTP verb or default to handler
   try {
     if (fs.existsSync(apiDir)) {
-      const files = fs.readdirSync(apiDir).filter(f => f.endsWith(".ts") || f.endsWith(".js"));
-      for (const file of files) {
-        const full = path.join(apiDir, file);
-        // dynamic import
-        // note: Bun supports file:// import; adjust for environment
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const mod = await import(full);
-        if (mod.default) {
-          // mount at /api/<name>
-          const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
-          app.get(route, mod.default as any);
-        }
-        // allow named exports: get/post/put/delete
-        ["get", "post", "put", "delete"].forEach((verb) => {
-          if (mod[verb]) {
-            const route = "/api/" + file.replace(/\.(t|j)sx?$/, "");
-            // @ts-ignore
-            app[verb](route, mod[verb]);
+      const registerHandlers = async (dir: string, prefix = "") => {
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+          const full = path.join(dir, file);
+          const stat = fs.statSync(full);
+          
+          if (stat.isDirectory()) {
+            // Recursively handle subdirectories
+            // Convert directory name: product.[id] -> product/:id
+            let dirPath = file.replace(/\[(\w+)\]/g, ":$1"); // product.[id] -> product.:id
+            dirPath = dirPath.replace(/\./g, "/"); // product.:id -> product/:id
+            await registerHandlers(full, prefix + "/" + dirPath);
+            continue;
           }
-        });
-      }
+          
+          if (!file.endsWith(".ts") && !file.endsWith(".js")) continue;
+          
+          // dynamic import
+          const mod = await import(full);
+          
+          // Convert file name to route: product.[id].ts -> /api/product/:id
+          let routePath = file.replace(/\.(t|j)sx?$/, ""); // product.[id]
+          routePath = routePath.replace(/\[(\w+)\]/g, ":$1"); // product.:id -> fix dot
+          routePath = routePath.replace(/\./g, "/"); // product/:id
+          const route = "/api" + prefix + "/" + routePath;
+          
+          
+          if (mod.default) {
+            app.get(route, mod.default as any);
+          }
+          
+          // allow named exports: get/post/put/patch/delete
+          ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
+            // const handlerKey = verb === "DELETE" ? "delete_handler" : verb.toLowerCase();
+            const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
+            if (handler) {
+              // @ts-ignore
+              app[verb.toLowerCase()](route, handler);
+              console.log(`Registering route: ${verb} ${route} from file ${file}`);
+            }
+          });
+        }
+      };
+      
+      await registerHandlers(apiDir);
     }
   } catch (e) {
     console.warn("Failed to auto-register api handlers", e);
