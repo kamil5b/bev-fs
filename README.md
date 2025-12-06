@@ -9,12 +9,12 @@ A complete, production-ready scaffold for a reusable fullstack framework with si
 **Key components:**
 * `packages/framework` — server/client/shared runtime APIs
 * `packages/cli` — CLI for project scaffolding  
-* `template-default` — starter template (bundled into CLI)
+* `packages/cli/src/template` — starter template (bundled into CLI)
 * Single Elysia process serves frontend + API on port 3000
-* File-based routing with bracket notation: `[paramName].ts` → `:paramName`
-* Nested routing support: `product.[productId]/progress.[progressId].ts`
+* Directory-based routing with bracket notation: `[paramName]` directories → `:paramName`
+* Nested routing support: `product/[id]/progress/[progressId]/` structure
 * Shared data store for persistence across handlers
-* Middleware support with built-in logging
+* Auto-discovery of routes from directory structure
 
 ## Quickstart
 
@@ -70,23 +70,24 @@ Then open http://localhost:5173 (Vite dev) or http://localhost:3000 (server with
 **Single-host, single-port deployment:**
 - Elysia server on **port 3000** (configurable via `PORT` env var)
 - Serves static Vue app + API routes from the same process
-- Auto-discovers API handlers from `src/server/api/`
-- File-based routing with bracket notation for parameters
-- Nested routing: `api/product.[productId]/progress.[progressId].ts` → `/api/product/:productId/progress/:progressId`
+- Auto-discovers API handlers from `src/server/router/` directory structure
+- Directory-based routing: `[paramName]` directories become `:paramName` in routes
+- Nested routing: `product/[id]/progress/[progressId]/` → `/product/:id/progress/:progressId`
 - SPA fallback: unknown routes return `index.html` for Vue Router client-side routing
 - Shared data store: `src/server/store.ts` maintains state across all handlers
-- Middleware support: pass custom middleware functions to framework
+- Client routes auto-discovered from `src/client/router/` directory structure
 
 **Development mode:** `bun run dev` runs Vite (port 5173) + Elysia (port 3000) concurrently  
 **Production mode:** `bun run build && bun start` → single Bun process on port 3000
 
 ## Features
 
-✅ **File-based API routing** — automatically register handlers from files  
+✅ **Directory-based API routing** — routes defined by file structure, not file names  
 ✅ **Nested endpoints** — organize related APIs in subdirectories  
+✅ **Auto-discovery** — no manual route registration needed  
+✅ **Directory-based page routing** — client pages auto-discovered from structure  
 ✅ **Shared store pattern** — persistent data across requests  
-✅ **DELETE method support** — via `delete_handler` export (JavaScript keyword workaround)  
-✅ **Middleware system** — extensible with custom logging, auth, etc.  
+✅ **HTTP method support** — GET, POST, PUT, PATCH, DELETE with uppercase exports  
 ✅ **Built-in logging** — request/response lifecycle tracking with timestamps  
 ✅ **TypeScript ready** — full type safety from server to client  
 ✅ **Single deployment** — no microservices complexity  

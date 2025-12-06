@@ -9,14 +9,20 @@ src/server/
 ├── index.ts          # Server entry point
 ├── middleware.ts     # Logging middleware factory
 ├── store.ts          # Shared in-memory data store
-└── api/
-    ├── product.ts                    # GET/POST /api/product
-    ├── product.[productId].ts        # GET/PATCH/DELETE /api/product/:productId
-    ├── product.[productId]/
-    │   ├── progress.ts               # GET/POST /api/product/:productId/progress
-    │   └── progress.[progressId].ts  # GET/PATCH/DELETE /api/product/:productId/progress/:progressId
-    └── users.ts                      # GET/POST /api/users
+└── router/
+    ├── users/
+    │   └── index.ts                  # GET/POST /api/users
+    └── product/
+        ├── index.ts                  # GET/POST /api/product
+        └── [id]/
+            ├── index.ts              # GET/PATCH/DELETE /api/product/:id
+            └── progress/
+                ├── index.ts          # GET/POST /api/product/:id/progress
+                └── [progressId]/
+                    └── index.ts      # GET/PATCH/DELETE /api/product/:id/progress/:progressId
 ```
+
+**Key pattern:** Routes are defined by directory structure. Each route endpoint must be in an `index.ts` file.
 
 ## Entry Point
 
@@ -24,15 +30,13 @@ src/server/
 
 ```typescript
 import path from 'path';
-import { createLoggingMiddleware } from './middleware';
 
 (async () => {
   const { createFrameworkServer } = await import('bev-fs');
   const { app, listen } = await createFrameworkServer({
-    apiDir: path.join(process.cwd(), 'src/server/api'),
+    routerDir: path.join(process.cwd(), 'src/server/router'),
     staticDir: path.join(process.cwd(), 'dist/client'),
-    port: Number(process.env.PORT) || 3000,
-    middleware: [createLoggingMiddleware()]
+    port: Number(process.env.PORT) || 3000
   });
 
   await listen();
@@ -41,10 +45,9 @@ import { createLoggingMiddleware } from './middleware';
 ```
 
 **Options:**
-- `apiDir` — directory to auto-scan for API handlers
+- `routerDir` — directory to auto-scan for API route handlers (default: `src/server/router`)
 - `staticDir` — where built client files are (Vite output)
 - `port` — server port (default 3000)
-- `middleware` — array of middleware functions to apply
 
 ## Data Persistence
 
@@ -67,38 +70,40 @@ export const store = {
 
 **Key pattern:** handlers modify `store.products` directly, so DELETE/PATCH operations persist.
 
-## File-Based Routing
+## Directory-Based Routing
 
-API handlers are auto-discovered from `src/server/api/`. File names are converted to routes:
+API handlers are auto-discovered from `src/server/router/`. Directory structure is converted to routes. Each route must have an `index.ts` file:
 
-| File | Route |
-|------|-------|
-| `product.ts` | `/api/product` |
-| `product.[productId].ts` | `/api/product/:productId` |
-| `users.ts` | `/api/users` |
-| `product.[productId]/progress.ts` | `/api/product/:productId/progress` |
-| `product.[productId]/progress.[progressId].ts` | `/api/product/:productId/progress/:progressId` |
+| Directory | Route |
+|-----------|----------|
+| `router/users/index.ts` | `/api/users` |
+| `router/product/index.ts` | `/api/product` |
+| `router/product/[id]/index.ts` | `/api/product/:id` |
+| `router/product/[id]/progress/index.ts` | `/api/product/:id/progress` |
+| `router/product/[id]/progress/[progressId]/index.ts` | `/api/product/:id/progress/:progressId` |
 
 **Naming conventions:**
-- Files in `api/` become `/api/*` routes
-- `[paramName].ts` → `:paramName` in route path
+- Directories in `router/` become `/api/` routes with `/` as prefix
+- `[paramName]` directory → `:paramName` in route path
 - Nested directories create nested routes
-- Remove file extension and bracket notation
+- Each route location must have an `index.ts` or `index.js` file
+- Only the parameter name matters: `[id]`, `[progressId]`, etc. — not the file name
 
 ## API Handlers
 
-### Basic Handler — `product.ts`
+### Basic Handler — `router/product/index.ts`
 
 ```typescript
-// src/server/api/product.ts
-import { store } from '../store';
+// src/server/router/product/index.ts
+import { store } from '../../store';
+import type { ProductAPI } from '../../shared/api';
 
-export const get = () => ({
+export const GET = (): ProductAPI.GetAllResponse => ({
   products: store.products
 });
 
-export const post = ({ body }) => {
-  const newId = Math.max(...store.products.map(p => p.id)) + 1;
+export const POST = ({ body }: any): ProductAPI.Product => {
+  const newId = Math.max(...store.products.map(p => p.id), 0) + 1;
   const product = { id: newId, ...body };
   store.products.push(product);
   return product;
@@ -106,71 +111,75 @@ export const post = ({ body }) => {
 ```
 
 **Exports:**
-- `get`, `post`, `put`, `patch`, `delete_handler` — named by HTTP method
-- `delete_handler` instead of `delete` (JavaScript keyword)
-- Functions receive Elysia context
+- `GET`, `POST`, `PUT`, `PATCH`, `DELETE` — named by HTTP method (uppercase)
+- `DELETE` instead of `delete_handler` (uppercase naming convention)
+- Functions receive Elysia context as parameter
+- Type responses using shared API types from `src/shared/api.ts`
 
-### Parametrized Handler — `product.[productId].ts`
+### Parametrized Handler — `router/product/[id]/index.ts`
 
 ```typescript
-// src/server/api/product.[productId].ts
-import { store } from '../../store';
+// src/server/router/product/[id]/index.ts
+import { store } from '../../../store';
+import type { ProductAPI } from '../../../shared/api';
 
-export const get = ({ params }) => {
-  const product = store.products.find(p => p.id === +params.productId);
-  if (!product) return { status: 404, error: 'Not found' };
+export const GET = ({ params }: any): ProductAPI.Product => {
+  const product = store.products.find(p => p.id === +params.id);
+  if (!product) throw new Error('Not found');
   return product;
 };
 
-export const patch = ({ params, body }) => {
-  const product = store.products.find(p => p.id === +params.productId);
-  if (!product) return { status: 404, error: 'Not found' };
+export const PATCH = ({ params, body }: any): ProductAPI.Product => {
+  const product = store.products.find(p => p.id === +params.id);
+  if (!product) throw new Error('Not found');
   Object.assign(product, body);
   return product;
 };
 
-export const delete_handler = ({ params }) => {
-  const idx = store.products.findIndex(p => p.id === +params.productId);
-  if (idx === -1) return { status: 404, error: 'Not found' };
+export const DELETE = ({ params }: any) => {
+  const idx = store.products.findIndex(p => p.id === +params.id);
+  if (idx === -1) throw new Error('Not found');
   const [deleted] = store.products.splice(idx, 1);
-  return deleted;
+  return { deleted };
 };
 ```
 
 **Access parameters:**
-- `params.productId` — from `[productId]` in filename
-- `params.progressId` — from nested `[progressId]`
-- Convert to number with `+params.productId`
+- `params.id` — from `[id]` directory name (not filename)
+- `params.progressId` — from nested `[progressId]` directory
+- Parameter names match directory names exactly (case-sensitive)
+- Convert to number with `+params.id`
 
-### Nested Handler — `product.[productId]/progress.ts`
+### Nested Handler — `router/product/[id]/progress/index.ts`
 
 ```typescript
-// src/server/api/product.[productId]/progress.ts
-import { store } from '../../../store';
+// src/server/router/product/[id]/progress/index.ts
+import { store } from '../../../../store';
+import type { ProgressAPI } from '../../../../shared/api';
 
-// Assume products have a progress array
-export const get = ({ params }) => {
-  const product = store.products.find(p => p.id === +params.productId);
-  if (!product) return { status: 404 };
+export const GET = ({ params }: any): ProgressAPI.GetAllResponse => {
+  const product = store.products.find(p => p.id === +params.id);
+  if (!product) throw new Error('Product not found');
   return { progresses: product.progress || [] };
 };
 
-export const post = ({ params, body }) => {
-  const product = store.products.find(p => p.id === +params.productId);
-  if (!product) return { status: 404 };
+export const POST = ({ params, body }: any): ProgressAPI.Progress => {
+  const product = store.products.find(p => p.id === +params.id);
+  if (!product) throw new Error('Product not found');
   
   if (!product.progress) product.progress = [];
   const newId = Math.max(...product.progress.map(p => p.id), 0) + 1;
-  const progress = { id: newId, ...body };
+  const progress = { id: newId, ...body, productId: product.id };
   product.progress.push(progress);
   return progress;
 };
 ```
 
 **Pattern:**
-- Access parent parameter: `params.productId`
-- Access nested parameter: `params.progressId` (if deeply nested)
+- Access parent parameter: `params.id` (from `[id]` directory)
+- Access current parameter: `params.progressId` (from `[progressId]` directory if present)
 - Check parent exists before accessing child
+- Parameters come from directory names, not file paths
 
 ## Middleware
 
@@ -236,24 +245,25 @@ Then in handlers, access with `context.user`.
 
 ## Error Handling
 
-### Status Codes
+### Throwing Errors
 
 ```typescript
-export const get = ({ params }) => {
-  if (!found) {
-    return new Response(JSON.stringify({ error: 'Not found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-  return data;
+export const GET = ({ params }: any) => {
+  const product = store.products.find(p => p.id === +params.id);
+  
+  // Throw for error responses
+  if (!product) throw new Error('Product not found');
+  
+  return product;
 };
 ```
+
+Elysia automatically catches errors and returns HTTP 500 with error message.
 
 ### Validation
 
 ```typescript
-export const post = ({ body }) => {
+export const POST = ({ body }: any) => {
   if (!body.name || !body.price) {
     throw new Error('name and price are required');
   }
@@ -261,47 +271,65 @@ export const post = ({ body }) => {
 };
 ```
 
-Elysia automatically catches thrown errors and returns 500.
+### Custom Status Codes
+
+For custom status codes, return a Response object:
+
+```typescript
+export const GET = ({ params }: any) => {
+  const product = store.products.find(p => p.id === +params.id);
+  
+  if (!product) {
+    return new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  
+  return product;
+};
+```
 
 ## Best Practices
 
-✅ **Import store once** — `import { store } from '../../store'`  
-✅ **Use consistent parameter names** — rename files to match: `product.[productId].ts`  
-✅ **Nest by resource** — group related endpoints in subdirectories  
-✅ **Export lowercase methods** — `get`, `post`, `patch`, but `delete_handler`  
-✅ **Type handler params** — use TypeScript for safety  
-✅ **Log important operations** — middleware handles request logging  
-✅ **Validate inputs** — check required fields in POST/PATCH handlers  
+✅ **Use directory-based routing** — organize handlers in nested `router/` directories  
+✅ **One index.ts per route** — each route location needs exactly one `index.ts` file  
+✅ **Use uppercase HTTP methods** — `GET`, `POST`, `PUT`, `PATCH`, `DELETE`  
+✅ **Match directory names to parameters** — `[id]` directory → `params.id` in handler  
+✅ **Validate and throw** — throw errors for invalid requests (Elysia handles HTTP status)  
+✅ **Use shared types** — define request/response types in `src/shared/api.ts`  
+✅ **Organize by resource** — group related endpoints in nested directories  
+✅ **Type handler context** — use `{ params, body }: any` with TypeScript comments  
+✅ **Centralize store logic** — keep data modifications in `store.ts` or database layer  
 
 ## Common Tasks
 
 ### Add a new endpoint
 
-1. Create file: `src/server/api/resource.ts`
-2. Export handlers: `export const get = () => {...}`
-3. Framework auto-registers at `/api/resource`
+1. Create directory: `src/server/router/resource/`
+2. Create file: `src/server/router/resource/index.ts`
+3. Export handlers: `export const GET = () => {...}`
+4. Framework auto-registers at `/api/resource`
 
 ### Add parameters
 
-1. Rename file: `resource.[id].ts`
-2. Access in handler: `params.id`
-3. Creates route: `/api/resource/:id`
+1. Create directory: `src/server/router/resource/[id]/`
+2. Create file: `src/server/router/resource/[id]/index.ts`
+3. Access in handler: `params.id`
+4. Creates route: `/api/resource/:id`
 
-### Add middleware
+### Nest endpoints
 
-1. Create function in `middleware.ts`
-2. Pass to `createFrameworkServer` in `index.ts`
-3. Middleware runs before all routes
+1. Create nested directory: `src/server/router/product/[id]/progress/`
+2. Create file: `src/server/router/product/[id]/progress/index.ts`
+3. Access parent: `params.id`, access nested params from directory names
+4. Creates route: `/api/product/:id/progress`
 
-### Delete operation
+### Add multiple parameters
 
-```typescript
-export const delete_handler = ({ params }) => {
-  // JavaScript keyword workaround
-};
-```
-
-**Never** name it `delete` — it's a reserved keyword.
+1. Create nested directories with `[paramName]`
+2. Example: `router/product/[id]/progress/[progressId]/index.ts`
+3. Access both: `params.id` and `params.progressId`
 
 ## Production Deployment
 
@@ -348,25 +376,24 @@ Then import in handlers and use async/await.
 
 ## Troubleshooting
 
-**Handler not found**
-- Check file is in `src/server/api/`
-- Verify file extension is `.ts` or `.js`
-- Framework logs route registration on startup
+**Routes not registering**
+- Check directory is in `src/server/router/`
+- Verify `index.ts` (or `index.js`) exists in the directory
+- Ensure file contains handler exports: `GET`, `POST`, etc.
+- Framework logs route registration: `Registering route: GET /api/product/:id from id/index.ts`
 
 **Parameter undefined**
-- Ensure file name matches: `resource.[paramName].ts`
+- Ensure directory name matches: `resource/[paramName]/`
 - Access as: `params.paramName` (case-sensitive)
+- Parameter names come from directory names, not file paths
 - Convert to number if needed: `+params.id`
 
-**DELETE returns 404**
-- Use `delete_handler` not `delete`
-- Check handler is exporting the function
-
-**Middleware not running**
-- Verify middleware is passed to `createFrameworkServer`
-- Check middleware function signature: `(app: Elysia) => void`
+**DELETE not working**
+- Use uppercase `DELETE` not `delete`
+- Verify handler is exporting the function
+- Check file is in `index.ts` in the correct directory
 
 **Data not persisting**
-- Ensure all handlers import same `store` object
-- Don't reassign store variables — modify in-place
-- For production, use a real database
+- Ensure all handlers import same `store` object from `store.ts`
+- Don't reassign store variables — modify in-place with mutation
+- For production, replace in-memory store with database layer

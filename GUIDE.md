@@ -5,11 +5,11 @@ A complete, production-oriented scaffold for a reusable fullstack framework base
 Includes:
 * `packages/framework` (`bev-fs`) — the runtime (server, client, shared helpers)
 * `packages/cli` (`create-bev-fs`) — a Bun-powered CLI to scaffold new projects  
-* `template-default` — the starter monolith template that the CLI copies
+* `packages/cli/src/template` — the starter monolith template that the CLI copies
 
 **Published to npm:**
-- `bev-fs@0.2.1+` — framework runtime with middleware support
-- `create-bev-fs@0.3.10+` — CLI tool with git init and logging middleware template
+- `bev-fs@0.2.1+` — framework runtime with directory-based routing
+- `create-bev-fs@0.3.10+` — CLI tool with git init and route auto-discovery
 
 ---
 
@@ -621,8 +621,10 @@ export type User = {
 - Elysia server runs on **port 3000** (configurable via `PORT` env var)
 - Serves both:
   - Static client files from `dist/client/` (Vite build output)
-  - API endpoints from auto-discovered handlers in `src/server/api/`
+  - API endpoints from auto-discovered handlers in `src/server/router/` directory structure
   - SPA fallback: unknown routes return `index.html` for Vue Router
+- Directory-based routing: `[paramName]` directories become `:paramName` in routes
+- Nested directories create nested routes automatically
 - No separate frontend/backend services needed
 - Scales horizontally by running multiple instances behind a load balancer
 
@@ -633,11 +635,12 @@ export type User = {
 ## Status
 
 ✅ **Production-ready**
-- Tested end-to-end: `npx create-bev-fs@latest` → `bun run dev` → server + client
+- Tested end-to-end: `npx create-bev-fs@latest` → `bun run dev` → server + client working
 - Published to npm with proper ES modules
 - Single-deployment architecture verified
-- Framework: `bev-fs@0.1.7+` (npm)
-- CLI: `create-bev-fs@0.1.13+` (npm)
+- Directory-based routing with auto-discovery working
+- Framework: `bev-fs@0.2.1+` (npm)
+- CLI: `create-bev-fs@0.3.10+` (npm)
 
 ## Recommended next steps
 

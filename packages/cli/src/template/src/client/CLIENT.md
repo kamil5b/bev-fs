@@ -6,53 +6,51 @@ The client directory contains the Vue 3 frontend application with type-safe API 
 
 ```
 src/client/
-├── main.ts          # App entry point, mounts Vue instance
+├── main.ts          # App entry point, auto-discovers routes
 ├── index.html       # HTML template
 ├── App.vue          # Root component
-├── router.ts        # Vue Router configuration
-├── api.ts           # Type-safe API client
-└── pages/
-    ├── index.vue
-    ├── products.vue
-    └── users.vue
+└── router/
+    ├── index.vue    # Homepage
+    ├── product/
+    │   ├── index.vue         # /product page
+    │   └── [id]/
+    │       ├── index.vue     # /product/:id detail page
+    │       └── progress/
+    │           ├── index.vue         # /product/:id/progress
+    │           └── [progressId]/
+    │               └── index.vue     # /product/:id/progress/:progressId
+    └── not-found/         # 404 catch-all page
+        └── index.vue
 ```
+
+**Key pattern:** Routes are defined by directory structure. Each route needs an `index.vue` file.
 
 ## Setup
 
-### `main.ts` — Entry Point
+### `main.ts` — Entry Point with Auto-Discovery
 
 ```typescript
 import { createApp } from 'vue';
 import App from './App.vue';
-import { router } from './router';
+import { createFrameworkApp } from 'bev-fs';
 
-createApp(App).use(router).mount('#app');
+// Auto-discover all index.vue files in router/ directory
+const routeModules = import.meta.glob<any>('./router/**/*.vue', { eager: true });
+
+const { app } = createFrameworkApp(App, { routeModules });
+app.mount('#app');
 ```
 
-Creates the Vue app, registers the router, and mounts to the DOM.
+**How it works:**
+- `import.meta.glob('./router/**/*.vue')` finds all `.vue` files in the router directory
+- Framework automatically converts directory structure to routes
+- `NotFound.vue` becomes catch-all route `/:pathMatch(.*)*` for 404 handling
 
 ## Routing
 
-### `router.ts` — Vue Router Setup
+### Directory-Based Route Definition
 
-```typescript
-import { createRouter, createWebHistory } from 'vue-router';
-import Home from './pages/index.vue';
-import Products from './pages/products.vue';
-import Users from './pages/users.vue';
-
-export const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    { path: '/', component: Home },
-    { path: '/products', component: Products },
-    { path: '/users', component: Users }
-  ]
-});
-```
-
-- Uses HTML5 history mode for clean URLs
-- All routes define corresponding page components
+Routes are defined by the directory structure in `src/client/router/`. No manual route configuration needed.
 
 ### Navigation
 
