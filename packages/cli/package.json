@@ -10,7 +10,7 @@
     "wrapper.js"
   ],
   "scripts": {
-    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/template dist/"
+    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/base src/template dist/"
   },
   "dependencies": {
     "fs-extra": "*",

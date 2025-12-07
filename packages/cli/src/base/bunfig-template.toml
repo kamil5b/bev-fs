@@ -1,0 +1,6 @@
+# Bun configuration
+# Rename this to bunfig.toml to use
+
+[build]
+# JavaScript runtime target
+target = "bun"
