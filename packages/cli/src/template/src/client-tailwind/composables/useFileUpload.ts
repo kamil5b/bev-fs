@@ -129,6 +129,33 @@ export function useFileUpload() {
   }
 
   /**
+   * Download a file
+   */
+  async function downloadFile(fileName: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/file/${encodeURIComponent(fileName)}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Download failed';
+    }
+  }
+
+  /**
    * Clear error message
    */
   function clearError() {
@@ -141,6 +168,7 @@ export function useFileUpload() {
     uploadedFiles,
     upload,
     deleteFile,
+    downloadFile,
     listFiles,
     clearFiles,
     clearError,

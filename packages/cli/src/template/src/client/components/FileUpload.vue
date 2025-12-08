@@ -47,20 +47,28 @@
           <div class="file-info">
             <span class="file-icon">📄</span>
             <div class="file-details">
-              <a :href="file.url" target="_blank" class="file-name">
-                {{ file.fileName }}
-              </a>
+              <span class="file-name">{{ file.fileName }}</span>
               <span class="file-size">{{ formatFileSize(file.size) }}</span>
             </div>
           </div>
-          <button
-            @click="handleDelete(file.fileName)"
-            :disabled="loading"
-            class="delete-button"
-            title="Delete file"
-          >
-            🗑️
-          </button>
+          <div class="file-actions">
+            <button
+              @click="handleDownload(file.fileName)"
+              :disabled="loading"
+              class="download-button"
+              title="Download file"
+            >
+              ⬇️
+            </button>
+            <button
+              @click="handleDelete(file.fileName)"
+              :disabled="loading"
+              class="delete-button"
+              title="Delete file"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -79,7 +87,7 @@ import { useFileUpload } from '../composables/useFileUpload';
 const fileInput = ref<HTMLInputElement>();
 const isDragging = ref(false);
 
-const { loading, error, uploadedFiles, upload, deleteFile, listFiles, clearError } =
+const { loading, error, uploadedFiles, upload, deleteFile, downloadFile, listFiles, clearError } =
   useFileUpload();
 
 onMounted(async () => {
@@ -98,7 +106,11 @@ function handleFileSelect(event: Event) {
   }
 }
 
-function handleDrop(event: DragEvent) {
+async function handleDownload(fileName: string) {
+  await downloadFile(fileName);
+}
+
+async function handleDelete(fileName: string) {
   isDragging.value = false;
   const files = event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : [];
   if (files.length > 0) {
@@ -280,9 +292,14 @@ function formatFileSize(bytes: number): string {
 
 .file-name {
   color: #3498db;
+  background: none;
+  border: none;
   text-decoration: none;
   word-break: break-word;
   font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
 }
 
 .file-name:hover {
@@ -294,6 +311,13 @@ function formatFileSize(bytes: number): string {
   color: #999;
 }
 
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.download-button,
 .delete-button {
   padding: 0.5rem;
   background: none;
@@ -304,10 +328,12 @@ function formatFileSize(bytes: number): string {
   flex-shrink: 0;
 }
 
+.download-button:hover,
 .delete-button:hover {
   transform: scale(1.2);
 }
 
+.download-button:disabled,
 .delete-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

@@ -64,24 +64,34 @@
           <div class="flex items-center gap-3 flex-1 min-w-0">
             <span class="text-2xl flex-shrink-0">📄</span>
             <div class="flex flex-col gap-1 min-w-0">
-              <a
-                :href="file.url"
-                target="_blank"
-                class="text-blue-600 hover:text-blue-800 hover:underline font-medium break-words"
+              <button
+                @click="handleDownload(file.fileName)"
+                class="text-blue-600 hover:text-blue-800 hover:underline font-medium break-words text-left"
+                title="Download file"
               >
                 {{ file.fileName }}
-              </a>
+              </button>
               <span class="text-sm text-gray-500">{{ formatFileSize(file.size) }}</span>
             </div>
           </div>
-          <button
-            @click="handleDelete(file.fileName)"
-            :disabled="loading"
-            class="ml-2 text-xl flex-shrink-0 hover:scale-110 transition-transform duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Delete file"
-          >
-            🗑️
-          </button>
+          <div class="ml-2 flex gap-2 flex-shrink-0">
+            <button
+              @click="handleDownload(file.fileName)"
+              :disabled="loading"
+              class="text-xl hover:scale-110 transition-transform duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download file"
+            >
+              ⬇️
+            </button>
+            <button
+              @click="handleDelete(file.fileName)"
+              :disabled="loading"
+              class="text-xl hover:scale-110 transition-transform duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Delete file"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -100,7 +110,7 @@ import { useFileUpload } from '../composables/useFileUpload';
 const fileInput = ref<HTMLInputElement>();
 const isDragging = ref(false);
 
-const { loading, error, uploadedFiles, upload, deleteFile, listFiles, clearError } =
+const { loading, error, uploadedFiles, upload, deleteFile, downloadFile, listFiles, clearError } =
   useFileUpload();
 
 onMounted(async () => {
@@ -129,6 +139,10 @@ function handleDrop(event: DragEvent) {
 
 async function uploadFiles(files: File[]) {
   await upload(files);
+}
+
+async function handleDownload(fileName: string) {
+  await downloadFile(fileName);
 }
 
 async function handleDelete(fileName: string) {

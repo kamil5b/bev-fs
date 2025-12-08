@@ -1,6 +1,6 @@
 {
   "name": "create-bev-fs",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "bin": {
     "create-bev-fs": "wrapper.js"

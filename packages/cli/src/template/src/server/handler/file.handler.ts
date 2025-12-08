@@ -61,6 +61,43 @@ export const handleUploadFiles = async (files: File[]) => {
 };
 
 /**
+ * GET /api/file/:fileName - Download a specific file
+ */
+export const handleDownloadFile = async (fileName: string) => {
+  try {
+    if (!fileName) {
+      return {
+        success: false,
+        message: "File name is required"
+      };
+    }
+
+    const fileContent = await defaultFileService.getFile(fileName);
+
+    if (!fileContent) {
+      return {
+        success: false,
+        message: `File '${fileName}' not found`
+      };
+    }
+
+    return new Response(fileContent, {
+      headers: {
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Type": "application/octet-stream",
+      },
+    });
+  } catch (error) {
+    console.error("Download file error:", error);
+    return {
+      success: false,
+      message: "Failed to download file",
+      error: String(error)
+    };
+  }
+};
+
+/**
  * DELETE /api/file/:fileName - Delete a specific file
  */
 export const handleDeleteFile = async (fileName: string) => {
