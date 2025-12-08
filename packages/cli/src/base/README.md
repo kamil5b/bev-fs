@@ -184,6 +184,7 @@ Customize in `vite.config.ts`:
 
 ## 📚 Resources
 
+- [bev-fs Framework Guide](../../../framework/FRAMEWORK.md) — Core framework API and utilities
 - [bev-fs Documentation](../../../docs/GUIDE.md)
 - [Bun Documentation](https://bun.sh/docs)
 - [Elysia Documentation](https://elysiajs.com)

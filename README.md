@@ -204,6 +204,7 @@ All config values are automatically injected into `process.env` with uppercase k
 
 ## Documentation
 
+- 📕 [**Framework Guide**](./packages/framework/FRAMEWORK.md) — Core framework API and utilities
 - 📘 [**Server Guide**](./packages/cli/src/template/src/server/SERVER.md) — Building APIs with directory-based routing
 - 📙 [**Client Guide**](./packages/cli/src/template/src/client/CLIENT.md) — Building UIs with Vue 3 and TypeScript
 - 📗 [**Complete Guide**](./GUIDE.md) — Framework internals and architecture

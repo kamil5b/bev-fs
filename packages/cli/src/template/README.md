@@ -204,6 +204,7 @@ This template is designed to be easily extended. Feel free to:
 
 ## 📖 Resources
 
+- [bev-fs Framework Guide](../../../framework/FRAMEWORK.md) — Core framework API and utilities
 - [Bun Documentation](https://bun.sh/docs)
 - [Elysia Documentation](https://elysiajs.com)
 - [Vue 3 Documentation](https://vuejs.org)
