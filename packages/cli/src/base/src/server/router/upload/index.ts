@@ -1,4 +1,3 @@
-import { multipart } from "@elysiajs/multipart";
 import { Elysia } from "elysia";
 
 /**
@@ -10,8 +9,7 @@ import { Elysia } from "elysia";
  * - An array of functions for multiple middlewares
  */
 export const middleware = [
-  (app: Elysia) => app.use(multipart()),
-  // Add more middlewares here as needed
+  // Add middlewares here as needed
   // (app) => app.use(authMiddleware()),
   // (app) => app.use(validationMiddleware()),
 ];

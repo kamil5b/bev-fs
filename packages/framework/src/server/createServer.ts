@@ -231,7 +231,7 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
                   scopedApp.use(routeMiddleware);
                 }
                 
-                routeApp = scopedApp;
+                routeApp = scopedApp as any;
               }
               
               if (mod.default) {
@@ -257,7 +257,7 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
                       methodScopedApp.use(methodMiddleware);
                     }
                     
-                    methodApp = methodScopedApp;
+                    methodApp = methodScopedApp as any;
                   }
                   
                   // @ts-ignore

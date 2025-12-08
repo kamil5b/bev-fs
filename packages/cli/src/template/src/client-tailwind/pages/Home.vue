@@ -33,6 +33,13 @@
         />
       </div>
 
+      <!-- File Upload Section -->
+      <div class="mt-8 bg-white rounded-lg shadow-lg p-8">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">File Management</h2>
+        <p class="text-slate-600 mb-6">Upload and manage your files:</p>
+        <FileUpload />
+      </div>
+
       <!-- Edit Modal -->
       <Modal 
         :isOpen="editingProduct !== null"
@@ -57,6 +64,7 @@ import ProductForm from '../components/ProductForm.vue';
 import ProductTable from '../components/ProductTable.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
+import FileUpload from '../components/FileUpload.vue';
 
 const router = useRouter();
 const { list, create, remove, update } = useProductAPI();

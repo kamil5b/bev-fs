@@ -1,15 +1,5 @@
-import { multipart } from "@elysiajs/multipart";
+import { t } from "elysia";
 import { handleListFiles, handleUploadFiles } from "../../handler/file.handler";
-
-/**
- * Apply per-method middleware
- * Only POST requests need multipart middleware for file uploads
- * GET requests don't need multipart
- */
-export const middleware = {
-  POST: (app) => app.use(multipart()),
-  // GET doesn't need multipart middleware
-};
 
 /**
  * GET /api/file - List all uploaded files
@@ -23,6 +13,8 @@ export const GET = async () => {
 
 /**
  * POST /api/file - Upload one or more files
+ * 
+ * Elysia automatically handles multipart/form-data when File type is specified
  * 
  * Example with curl:
  * curl -F "files=@file1.txt" -F "files=@file2.txt" http://localhost:3000/api/file
