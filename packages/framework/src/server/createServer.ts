@@ -218,63 +218,56 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
                 ? mod.middleware
                 : null;
               
-              // Create a scoped app for this route if route-level middleware is defined
-              let routeApp = app;
-              if (routeMiddleware) {
-                // Create a new Elysia instance scoped to this route
-                const scopedApp = new Elysia({ prefix: route });
-                
-                // Apply route-level middleware
-                if (Array.isArray(routeMiddleware)) {
-                  routeMiddleware.forEach((middleware: any) => scopedApp.use(middleware));
-                } else if (typeof routeMiddleware === "function") {
-                  scopedApp.use(routeMiddleware);
-                }
-                
-                routeApp = scopedApp as any;
-              }
-              
+              // Register default export handler if it exists
               if (mod.default) {
-                routeApp.get("/", mod.default as any);
+                const handler = mod.default;
+                
+                if (routeMiddleware) {
+                  // Create a scoped app for this route with middleware
+                  const scopedApp = new Elysia({ prefix: route });
+                  if (Array.isArray(routeMiddleware)) {
+                    routeMiddleware.forEach((middleware: any) => scopedApp.use(middleware));
+                  } else if (typeof routeMiddleware === "function") {
+                    scopedApp.use(routeMiddleware);
+                  }
+                  scopedApp.get("/", handler as any);
+                  app.use(scopedApp as any);
+                } else {
+                  app.get(route, handler as any);
+                }
               }
               
-              // Allow named exports: GET, POST, PUT, PATCH, DELETE
+              // Register named HTTP method handlers: GET, POST, PUT, PATCH, DELETE
               ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
                 const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
                 if (handler) {
                   // Check for per-method middleware
                   const methodMiddleware = mod.middleware?.[verb];
-                  let methodApp = routeApp;
                   
                   if (methodMiddleware) {
-                    // Create a scoped app for this specific method
+                    // Create a scoped app for this specific method with middleware
                     const methodScopedApp = new Elysia({ prefix: route });
                     
-                    // Apply method-level middleware
                     if (Array.isArray(methodMiddleware)) {
                       methodMiddleware.forEach((middleware: any) => methodScopedApp.use(middleware));
                     } else if (typeof methodMiddleware === "function") {
                       methodScopedApp.use(methodMiddleware);
                     }
                     
-                    methodApp = methodScopedApp as any;
+                    // @ts-ignore
+                    methodScopedApp[verb.toLowerCase()]("/", handler);
+                    app.use(methodScopedApp as any);
+                  } else if (routeMiddleware) {
+                    // Route already has middleware, skip (default export would have registered it)
+                  } else {
+                    // Register directly on main app
+                    // @ts-ignore
+                    app[verb.toLowerCase()](route, handler);
                   }
                   
-                  // @ts-ignore
-                  methodApp[verb.toLowerCase()](route === "/api" ? "/" : "", handler);
                   console.log(`Registering route: ${verb} ${route} from ${entry}/index.ts`);
-                  
-                  // Register method-scoped app if it has method-specific middleware
-                  if (methodMiddleware && methodApp !== routeApp && methodApp !== app) {
-                    app.use(methodApp);
-                  }
                 }
               });
-              
-              // Register scoped app with main app if route-level middleware was used
-              if (routeMiddleware && routeApp !== app) {
-                app.use(routeApp);
-              }
             }
             
             // Continue recursing for nested directories
