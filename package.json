@@ -1,14 +1,13 @@
 {
   "name": "bev-fs-monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "bootstrap": "bun install",
-    "dev:example": "cd example && bun run dev",
-    "build:example": "cd example && bun run build",
-    "publish:framework": "cd packages/framework && npm publish"
+    "publish": "./scripts/publish.sh",
+    "dev": "./scripts/testbed.sh"
   }
 }

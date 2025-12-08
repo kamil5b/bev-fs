@@ -3,8 +3,8 @@
 # Build and create testbed using the CLI
 set -e
 
-# Calculate absolute path to workspace
-WORKSPACE_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Calculate absolute path to workspace (go up one level from scripts dir)
+WORKSPACE_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 FRAMEWORK_PATH="$WORKSPACE_ROOT/packages/framework"
 CLI_PATH="$WORKSPACE_ROOT/packages/cli"
 
@@ -28,7 +28,7 @@ fi
 echo "✓ /tmp/bun-testbed deleted"
 
 cd /tmp
-bun "$CLI_PATH/dist/index.js" bun-testbed
+bun "$CLI_PATH/dist/index.js" bun-testbed "$@"
 cd /tmp/bun-testbed
 
 echo ""
