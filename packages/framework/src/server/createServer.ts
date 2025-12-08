@@ -3,6 +3,9 @@ import { staticPlugin } from "@elysiajs/static";
 import path from "path";
 import fs from "fs";
 import { convertPathToRoute } from "../shared/createRoute";
+import { validateServerConfig } from "../config/validator";
+import { RouteDiscoveryError } from "../errors/RouteDiscoveryError";
+import type { HealthCheckResponse } from "../shared/types";
 
 /**
  * Helper to load config from .env file
@@ -161,14 +164,28 @@ export type ServerOptions = {
 };
 
 export async function createFrameworkServer(opts: ServerOptions = {}) {
+  const isDev = opts.env === "development";
+  
   // Load config from config.yaml and .env
   const config = loadConfig();
   const serverConfig = config.server || {};
   
+  // Validate configuration
+  try {
+    validateServerConfig({
+      port: opts.port ?? serverConfig.port,
+      routerDir: opts.routerDir ?? serverConfig.router_dir,
+      staticDir: opts.staticDir ?? serverConfig.static_dir,
+    });
+  } catch (error) {
+    console.error("Configuration validation failed:", error);
+    throw error;
+  }
+  
   // Inject config into process.env for global access
   injectConfigToEnv(config);
   
-  const port = opts.port ?? parseInt(serverConfig.port) ?? 3000;
+  const port = opts.port ?? parseInt(serverConfig.port as string) ?? 3000;
   const staticDir = opts.staticDir ?? serverConfig.static_dir ?? path.join(process.cwd(), "dist/client");
   const routerDir = opts.routerDir ?? serverConfig.router_dir ?? path.join(process.cwd(), "src/server/router");
 
@@ -181,109 +198,225 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
     }
   }
 
+  // Health check endpoint - always available
+  const startTime = Date.now();
+  app.get("/health", (): HealthCheckResponse => ({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    uptime: (Date.now() - startTime) / 1000,
+    version: process.env.npm_package_version || "1.0.0",
+  }));
+
   // Static asset serving
   if (fs.existsSync(staticDir)) {
     app.use(staticPlugin({ assets: staticDir, prefix: "/" }));
+  } else if (isDev) {
+    console.warn(`Static directory not found: ${staticDir}`);
   }
 
   // Auto-register API handlers: directory-based routing
   // Routes are defined by directory structure, handler must be in index.ts
   // Example: src/server/router/product/[id]/progress/index.ts -> /api/product/:id/progress
-  try {
-    if (fs.existsSync(routerDir)) {
-      const registerHandlers = async (dir: string, routePath = "") => {
+  // Middleware chains hierarchically: parent routes → child routes
+  
+  /**
+   * Middleware type definitions
+   */
+  type MiddlewareFunc = (app: Elysia) => void;
+  type RouteHandlerFunc = (c: any) => any | Promise<any>;
+  interface RouteModule {
+    default?: RouteHandlerFunc;
+    GET?: RouteHandlerFunc;
+    POST?: RouteHandlerFunc;
+    PUT?: RouteHandlerFunc;
+    PATCH?: RouteHandlerFunc;
+    DELETE?: RouteHandlerFunc;
+    middleware?: MiddlewareFunc | MiddlewareFunc[] | Record<string, MiddlewareFunc | MiddlewareFunc[]>;
+  }
+
+  /**
+   * Separate route-level middleware from method-level middleware
+   */
+  const separateMiddleware = (middleware: any): {
+    routeLevel: MiddlewareFunc[];
+    methodLevel: Record<string, MiddlewareFunc[]>;
+  } => {
+    const HTTP_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+    const routeLevel: MiddlewareFunc[] = [];
+    const methodLevel: Record<string, MiddlewareFunc[]> = {};
+
+    if (Array.isArray(middleware)) {
+      routeLevel.push(...middleware);
+    } else if (typeof middleware === "function") {
+      routeLevel.push(middleware);
+    } else if (typeof middleware === "object") {
+      for (const [key, value] of Object.entries(middleware)) {
+        if (HTTP_METHODS.has(key)) {
+          const arr = Array.isArray(value) ? value : [value as MiddlewareFunc];
+          methodLevel[key] = arr;
+        } else {
+          const arr = Array.isArray(value) ? value : [value as MiddlewareFunc];
+          routeLevel.push(...arr);
+        }
+      }
+    }
+
+    return { routeLevel, methodLevel };
+  };
+
+  /**
+   * Collect middleware from all parent directories
+   * parent route → child route → grandchild route
+   */
+  const collectParentMiddleware = async (pathParts: string[]): Promise<MiddlewareFunc[]> => {
+    const collected: MiddlewareFunc[] = [];
+    let currentDir = routerDir;
+
+    for (let i = 0; i < pathParts.length - 1; i++) {
+      currentDir = path.join(currentDir, pathParts[i]);
+      const indexPath = path.join(currentDir, "index.ts");
+      const indexPathJs = path.join(currentDir, "index.js");
+
+      const resolvedPath = fs.existsSync(indexPath) ? indexPath : fs.existsSync(indexPathJs) ? indexPathJs : null;
+
+      if (resolvedPath) {
+        try {
+          const mod = (await import(/* @vite-ignore */ resolvedPath)) as RouteModule;
+          if (mod.middleware) {
+            const { routeLevel } = separateMiddleware(mod.middleware);
+            collected.push(...routeLevel);
+          }
+        } catch (e) {
+          if (isDev) {
+            console.warn(`Failed to load parent middleware from ${resolvedPath}:`, e);
+          }
+        }
+      }
+    }
+
+    return collected;
+  };
+
+  /**
+   * Apply middlewares to Elysia instance in order (parent → child)
+   */
+  const applyMiddlewares = (elysia: Elysia, middlewares: MiddlewareFunc[]): void => {
+    for (const middleware of middlewares) {
+      if (typeof middleware === "function") {
+        middleware(elysia);
+      }
+    }
+  };
+
+  if (fs.existsSync(routerDir)) {
+    try {
+      /**
+       * Recursively register handlers with hierarchical middleware support
+       */
+      const registerHandlers = async (dir: string, routePath = ""): Promise<void> => {
         const entries = fs.readdirSync(dir);
+
         for (const entry of entries) {
           const full = path.join(dir, entry);
           const stat = fs.statSync(full);
-          
+
           if (stat.isDirectory()) {
-            // Build the route path: product/[id]/progress
             const nextPath = routePath ? `${routePath}/${entry}` : entry;
-            
-            // Check if index.ts exists in this directory
             const indexPath = path.join(full, "index.ts");
             const indexPathJs = path.join(full, "index.js");
-            
-            if (fs.existsSync(indexPath) || fs.existsSync(indexPathJs)) {
-              // Register handlers from index.ts
-              const resolvedPath = fs.existsSync(indexPath) ? indexPath : indexPathJs;
-              const mod = await import(/* @vite-ignore */ resolvedPath);
-              
-              // Convert path to route: product/[id]/progress -> /product/:id/progress
-              const route = "/api" + convertPathToRoute(nextPath);
-              
-              // Check if middleware is route-level or per-method
-              const routeMiddleware = mod.middleware && !mod.middleware.GET && !mod.middleware.POST && !mod.middleware.PUT && !mod.middleware.PATCH && !mod.middleware.DELETE
-                ? mod.middleware
-                : null;
-              
-              // Register default export handler if it exists
-              if (mod.default) {
-                const handler = mod.default;
-                
-                if (routeMiddleware) {
-                  // Create a scoped app for this route with middleware
-                  const scopedApp = new Elysia({ prefix: route });
-                  if (Array.isArray(routeMiddleware)) {
-                    routeMiddleware.forEach((middleware: any) => scopedApp.use(middleware));
-                  } else if (typeof routeMiddleware === "function") {
-                    scopedApp.use(routeMiddleware);
+
+            const resolvedPath = fs.existsSync(indexPath) ? indexPath : fs.existsSync(indexPathJs) ? indexPathJs : null;
+
+            if (resolvedPath) {
+              try {
+                const mod = (await import(/* @vite-ignore */ resolvedPath)) as RouteModule;
+                const route = "/api" + convertPathToRoute(nextPath);
+                const pathParts = nextPath.split("/");
+
+                // Collect all parent middlewares
+                const parentMiddlewares = await collectParentMiddleware(pathParts);
+
+                // Separate current route's middleware
+                const currentMiddleware = mod.middleware ? separateMiddleware(mod.middleware) : { routeLevel: [], methodLevel: {} };
+
+                // Combine parent + route-level middleware (in order)
+                const allRouteMiddlewares = [...parentMiddlewares, ...currentMiddleware.routeLevel];
+
+                // Register default handler if exists
+                if (mod.default) {
+                  if (allRouteMiddlewares.length > 0) {
+                    const scopedApp = new Elysia({ prefix: route as any });
+                    applyMiddlewares(scopedApp, allRouteMiddlewares);
+                    scopedApp.get("/", mod.default as any);
+                    app.use(scopedApp as any);
+                  } else {
+                    app.get(route, mod.default as any);
                   }
-                  scopedApp.get("/", handler as any);
-                  app.use(scopedApp as any);
-                } else {
-                  app.get(route, handler as any);
+                }
+
+                // Register HTTP method handlers
+                const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+                for (const verb of HTTP_METHODS) {
+                  const handler = mod[verb as keyof RouteModule] as RouteHandlerFunc | undefined;
+                  if (handler) {
+                    const methodSpecificMiddleware = currentMiddleware.methodLevel[verb] || [];
+                    const allMethodMiddlewares = [...allRouteMiddlewares, ...methodSpecificMiddleware];
+
+                    if (allMethodMiddlewares.length > 0) {
+                      const methodScopedApp = new Elysia({ prefix: route as any });
+                      applyMiddlewares(methodScopedApp, allMethodMiddlewares);
+                      // @ts-ignore
+                      methodScopedApp[verb.toLowerCase()]("/", handler);
+                      app.use(methodScopedApp as any);
+                    } else {
+                      // @ts-ignore
+                      app[verb.toLowerCase()](route, handler);
+                    }
+
+                    if (isDev) {
+                      const mwInfo = allMethodMiddlewares.length > 0 ? ` (${allMethodMiddlewares.length} middlewares)` : "";
+                      console.log(`Registered route: ${verb} ${route}${mwInfo}`);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.warn(`Failed to load route handler at ${resolvedPath}:`, error);
+                if (isDev) {
+                  throw new RouteDiscoveryError(routerDir, `Failed to load route handler at ${resolvedPath}`, error);
                 }
               }
-              
-              // Register named HTTP method handlers: GET, POST, PUT, PATCH, DELETE
-              ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
-                const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
-                if (handler) {
-                  // Check for per-method middleware
-                  const methodMiddleware = mod.middleware?.[verb];
-                  
-                  if (methodMiddleware) {
-                    // Create a scoped app for this specific method with middleware
-                    const methodScopedApp = new Elysia({ prefix: route });
-                    
-                    if (Array.isArray(methodMiddleware)) {
-                      methodMiddleware.forEach((middleware: any) => methodScopedApp.use(middleware));
-                    } else if (typeof methodMiddleware === "function") {
-                      methodScopedApp.use(methodMiddleware);
-                    }
-                    
-                    // @ts-ignore
-                    methodScopedApp[verb.toLowerCase()]("/", handler);
-                    app.use(methodScopedApp as any);
-                  } else if (routeMiddleware) {
-                    // Route already has middleware, skip (default export would have registered it)
-                  } else {
-                    // Register directly on main app
-                    // @ts-ignore
-                    app[verb.toLowerCase()](route, handler);
-                  }
-                  
-                  console.log(`Registering route: ${verb} ${route} from ${entry}/index.ts`);
-                }
-              });
             }
-            
-            // Continue recursing for nested directories
+
+            // Recurse into subdirectories
             await registerHandlers(full, nextPath);
           }
         }
       };
-      
+
       await registerHandlers(routerDir);
+    } catch (error) {
+      if (error instanceof RouteDiscoveryError) {
+        console.error("Route discovery error:", error.message);
+        if (isDev) throw error;
+      } else {
+        console.warn("Failed to auto-register API handlers:", error instanceof Error ? error.message : error);
+      }
     }
-  } catch (e) {
-    console.warn("Failed to auto-register api handlers", e);
+  } else if (isDev) {
+    console.warn(`Router directory not found: ${routerDir}`);
   }
 
   // SPA fallback for client-side routing
+  // Only serve index.html for non-API paths
   app.get("*", (c) => {
+    const pathname = new URL(c.request.url).pathname;
+    
+    // Don't serve index.html for API routes
+    if (pathname.startsWith("/api/")) {
+      c.set.status = 404;
+      return { error: "Not Found" };
+    }
+    
     const index = path.join(staticDir, "index.html");
     if (fs.existsSync(index)) return Bun.file(index);
     return { message: "Server running" };
@@ -291,6 +424,9 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
 
   return {
     app,
-    listen: (p = port) => app.listen(p)
+    listen: (p = port) => {
+      console.log(`Server listening on port ${p}`);
+      return app.listen(p);
+    }
   };
 }

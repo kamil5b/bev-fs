@@ -1,4 +1,19 @@
+import { Elysia } from 'elysia';
 import { handleListFiles, handleUploadFiles } from "../../handler/file.handler";
+
+/**
+ * Route-level middleware for all file operations
+ * Applied to: /api/file and /api/file/[fileName]
+ */
+export const middleware = [
+  (app: Elysia) => {
+    app.derive(({ request }) => {
+      const timestamp = Date.now();
+      const contentType = request.headers.get('content-type') || 'unknown';
+      return { fileRouteTimestamp: timestamp, contentType };
+    });
+  },
+];
 
 /**
  * GET /api/file - List all uploaded files
@@ -10,10 +25,17 @@ export const GET = async () => {
   return await handleListFiles();
 };
 
-export const POST = async ({ body }: any) => {
+/**
+ * POST /api/file - Upload files
+ * 
+ * Example with curl:
+ * curl -F "file=@document.pdf" http://localhost:3000/api/file
+ */
+export const POST = async ({ body, set }: any) => {
   const files: File[] = [];
 
   if (!body || typeof body !== "object") {
+    set.status = 400;
     return {
       success: false,
       message: "No files provided"
@@ -33,5 +55,5 @@ export const POST = async ({ body }: any) => {
     }
   }
 
-  return await handleUploadFiles(files);
+  return await handleUploadFiles(files, { set });
 };

@@ -8,7 +8,12 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc src/index.ts src/**/*.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --module ESNext --moduleResolution node"
+    "build": "tsc src/index.ts src/**/*.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --module ESNext --moduleResolution node",
+    "type-check": "tsc --noEmit",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "lint": "eslint src/ --ext .ts",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "elysia": "*",

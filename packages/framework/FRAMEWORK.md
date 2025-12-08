@@ -525,29 +525,159 @@ src/server/router/
                 └── index.ts      (GET, PATCH, DELETE)
 ```
 
-### Pattern 3: Adding Custom Middleware
+### Pattern 3: Hierarchical Middleware Chaining
+
+The framework supports **hierarchical middleware inheritance**. Middleware defined in parent routes automatically applies to all child routes.
+
+#### Route-Level Middleware (applies to all methods)
+
+```typescript
+// src/server/router/product/index.ts
+import { Elysia } from 'elysia';
+
+// Middleware applies to GET, POST, PUT, PATCH, DELETE on this route
+// AND to all nested routes: /product/[id], /product/[id]/progress, etc.
+export const middleware = [
+  (app: Elysia) => {
+    app.derive(() => ({
+      startTime: Date.now(),
+    }));
+  },
+];
+
+export const GET = () => ({ products: [] });
+export const POST = ({ body }: any) => ({ id: 1 });
+```
+
+#### Method-Specific Middleware
+
+```typescript
+// src/server/router/product/[id]/index.ts
+import { Elysia } from 'elysia';
+
+// Apply different middleware to different methods
+export const middleware = {
+  GET: [
+    (app: Elysia) => {
+      // Logging only for GET requests
+      app.derive(() => ({ method: 'GET' }));
+    },
+  ],
+  DELETE: [
+    (app: Elysia) => {
+      // Authorization only for DELETE requests
+      app.derive(({ headers }) => {
+        const token = headers["authorization"];
+        if (!token) throw new Error("Unauthorized");
+        return { authorized: true };
+      });
+    },
+  ],
+};
+
+export const GET = ({ params }: any) => ({ id: params.id });
+export const DELETE = ({ params }: any) => ({ success: true });
+```
+
+#### Middleware Inheritance Chain Example
+
+```
+Directory structure:
+src/server/router/
+└── product/                          (has route-level middleware)
+    └── [id]/                         (has route-level middleware)
+        └── progress/                 (has method-specific middleware)
+            └── [progressId]/
+
+Request to: GET /api/product/123/progress/456
+
+Middleware execution order:
+1. Global server middleware (CORS, compression, etc.)
+2. Product route middleware (timing, logging)
+3. Product/:id middleware (ID validation)
+4. Progress route GET middleware (specific to this method)
+5. Progress/:progressId handler
+```
+
+#### Building Custom Middleware Factories
 
 ```typescript
 // src/server/middleware.ts
+import { Elysia } from 'elysia';
+
 export function createAuthMiddleware() {
-  return (app) => {
-    return app.derive(({ headers }) => {
+  return (app: Elysia) => {
+    app.derive(({ headers }) => {
       const token = headers["authorization"]?.split(" ")[1];
       if (!token) throw new Error("Unauthorized");
       return { userId: decodeToken(token) };
     });
   };
 }
+
+export function createAdminMiddleware() {
+  return (app: Elysia) => {
+    app.derive(({ userId }) => {
+      if (userId !== 'admin') throw new Error("Forbidden");
+      return { isAdmin: true };
+    });
+  };
+}
+
+export function createValidationMiddleware(schema: any) {
+  return (app: Elysia) => {
+    app.derive(({ body }) => {
+      const validation = validateBody(body, schema);
+      if (!validation.valid) throw new Error(validation.error);
+      return { validated: true };
+    });
+  };
+}
 ```
 
 ```typescript
-// src/server/router/protected/index.ts
-import { createAuthMiddleware } from "../../middleware";
+// src/server/router/admin/users/index.ts
+import { createAuthMiddleware, createAdminMiddleware } from '../../../middleware';
 
-export const middleware = createAuthMiddleware();
+export const middleware = [
+  createAuthMiddleware(),
+  createAdminMiddleware(),
+];
 
-export const GET = ({ userId }) => {
-  return { message: `Hello, user ${userId}` };
+export const GET = ({ userId }: any) => {
+  return { users: [], requestedBy: userId };
+};
+
+export const DELETE = ({ body, userId }: any) => {
+  return { deleted: true, deletedBy: userId };
+};
+```
+
+#### Mixing Route-Level and Method-Specific Middleware
+
+```typescript
+// src/server/router/data/[id]/index.ts
+import { Elysia } from 'elysia';
+import { createAuthMiddleware, createAdminMiddleware } from '../../../middleware';
+
+// Route-level: applies to all methods
+export const middleware = [
+  createAuthMiddleware(),  // All methods require auth
+];
+
+// Method-specific: only for DELETE
+export const middleware = {
+  DELETE: [
+    createAdminMiddleware(),  // DELETE also requires admin (in addition to auth)
+  ],
+};
+
+export const GET = ({ userId }: any) => {
+  return { data: [], user: userId };  // userId from auth middleware
+};
+
+export const DELETE = ({ userId, isAdmin }: any) => {
+  return { success: true, deletedBy: userId };  // userId + isAdmin available
 };
 ```
 

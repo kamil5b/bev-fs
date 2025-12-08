@@ -102,7 +102,7 @@ onMounted(async () => {
     product.value = productData.product;
 
     const progressData = await listProgress(id);
-    progresses.value = progressData.progresses;
+    progresses.value = progressData.progress;
   } catch (error) {
     console.error('Failed to load data:', error);
     router.push('/');

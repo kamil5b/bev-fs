@@ -110,14 +110,6 @@ async function handleDownload(fileName: string) {
   await downloadFile(fileName);
 }
 
-async function handleDelete(fileName: string) {
-  isDragging.value = false;
-  const files = event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : [];
-  if (files.length > 0) {
-    uploadFiles(files);
-  }
-}
-
 async function uploadFiles(files: File[]) {
   await upload(files);
 }

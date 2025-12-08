@@ -1,26 +1,36 @@
 import { Elysia } from 'elysia';
 
+/**
+ * Request logging middleware with timing
+ */
 export function createLoggingMiddleware() {
   return (app: Elysia) => {
-    app.derive((context) => {
-      const timestamp = new Date().toISOString();
-      const method = context.request?.method || 'UNKNOWN';
-      try {
-        const pathname = new URL(context.request?.url || '', 'http://localhost').pathname;
-        console.log(`[INFO]  ${timestamp} - ${method} ${pathname} - ENTER`);
-      } catch {
-        // Silent fail
-      }
-      return {};
-    });
+    return app
+      .derive({ as: 'scoped' }, ({ request }) => {
+        const startTime = Date.now();
+        const timestamp = new Date().toISOString();
+        const method = request.method;
+        const pathname = new URL(request.url).pathname;
+        console.log(`[${timestamp}] ${method} ${pathname}`);
+        return { startTime };
+      })
+      .onAfterHandle({ as: 'scoped' }, ({ request, startTime }) => {
+        const duration = Date.now() - startTime;
+        const method = request.method;
+        const pathname = new URL(request.url).pathname;
+        console.log(`${method} ${pathname} - ${duration}ms`);
+      });
   };
 }
 
+/**
+ * Example custom middleware
+ */
 export function createRouteCustomMiddleware() {
   return (app: Elysia) => {
-    app.derive((context) => {
-      console.log('This is custom route middleware example');
-      return {};
+    return app.onBeforeHandle(({ request }) => {
+      // Add custom logic here (e.g., authentication, validation)
+      console.log('Custom middleware executed for:', request.url);
     });
   };
 }

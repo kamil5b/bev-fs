@@ -1,9 +1,11 @@
-[watch]
-# configure watch if needed
+# Bun configuration for bev-fs framework package
+# https://bun.sh/docs/runtime/bunfig
 
 [run]
 # Optimization level for runtime
 logLevel = "warn"
+
+# Allow external imports
 hot = false
 
 [test]
@@ -12,5 +14,5 @@ root = "src"
 testTimeout = 5000
 
 [install]
-# Dependency resolution
+# Dependency resolution behavior
 peer = true

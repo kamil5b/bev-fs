@@ -3,21 +3,43 @@
 # Parse command line arguments for per-package bump flags
 declare -A BUMP_OVERRIDES
 
+
+# Parse bump flags and track if any were set
+bump_flag_set=0
+
 for arg in "$@"; do
-  case $arg in
-    --bump-major=*)
-      PKG="${arg#*=}"
-      BUMP_OVERRIDES["$PKG"]="major"
-      ;;
-    --bump-minor=*)
-      PKG="${arg#*=}"
-      BUMP_OVERRIDES["$PKG"]="minor"
-      ;;
-    --bump-patch=*)
-      PKG="${arg#*=}"
-      BUMP_OVERRIDES["$PKG"]="patch"
-      ;;
-  esac
+    case $arg in
+        --bump-major=*)
+            PKG="${arg#*=}"
+            BUMP_OVERRIDES["$PKG"]="major"
+            bump_flag_set=1
+            ;;
+        --bump-minor=*)
+            PKG="${arg#*=}"
+            BUMP_OVERRIDES["$PKG"]="minor"
+            bump_flag_set=1
+            ;;
+        --bump-patch=*)
+            PKG="${arg#*=}"
+            BUMP_OVERRIDES["$PKG"]="patch"
+            bump_flag_set=1
+            ;;
+        --bump-major)
+            BUMP_OVERRIDES["create-bev-fs"]="major"
+            BUMP_OVERRIDES["bev-fs"]="major"
+            bump_flag_set=1
+            ;;
+        --bump-minor)
+            BUMP_OVERRIDES["create-bev-fs"]="minor"
+            BUMP_OVERRIDES["bev-fs"]="minor"
+            bump_flag_set=1
+            ;;
+        --bump-patch)
+            BUMP_OVERRIDES["create-bev-fs"]="patch"
+            BUMP_OVERRIDES["bev-fs"]="patch"
+            bump_flag_set=1
+            ;;
+    esac
 done
 
 check_and_publish() {

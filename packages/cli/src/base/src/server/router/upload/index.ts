@@ -1,29 +1,41 @@
 import { Elysia } from "elysia";
 
 /**
- * Example of route-level middleware (multiple)
- * These middlewares will only apply to this route
+ * Route-level middleware for upload route
  * 
- * You can pass either:
- * - A single function: export const middleware = (app) => app.use(something());
- * - An array of functions for multiple middlewares
+ * INHERITS middleware from parent route (root /)
+ * Middleware chain:
+ *  1. Root middleware (request ID generation)
+ *  2. This route's middleware (file validation)
+ *  3. Handler execution
  */
 export const middleware = [
-  // Add middlewares here as needed
-  // (app) => app.use(authMiddleware()),
-  // (app) => app.use(validationMiddleware()),
+  (app: Elysia) => {
+    app.derive(({ body }) => {
+      // Validate that files are provided
+      if (!body || Object.keys(body).length === 0) {
+        throw new Error("No files provided");
+      }
+      return { filesCount: Object.keys(body).length };
+    });
+  },
 ];
 
 /**
  * Handle file uploads
  * POST /api/upload
+ * 
+ * Example with curl:
+ * curl -F "file=@document.pdf" http://localhost:3000/api/upload
  */
-export const POST = ({ body }: any) => {
-  console.log("Files received:", body);
+export const POST = ({ body, requestId, filesCount }: any) => {
+  console.log(`[${requestId}] Files received:`, Object.keys(body));
   
   return {
     success: true,
-    message: "File upload endpoint",
-    filesReceived: Object.keys(body || {}).length
+    message: "File upload successful",
+    requestId,
+    filesCount,
+    files: Object.keys(body || {})
   };
 };

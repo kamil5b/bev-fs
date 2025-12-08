@@ -58,7 +58,16 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   const templateDir = path.join(__dirname, `./${templateType}`);
   
   if (!fs.existsSync(templateDir)) {
-    throw new Error(`Template "${templateType}" not found`);
+    console.error(`❌ Template not found: ${templateDir}`);
+    console.error("Run: npm run build");
+    process.exit(1);
+  }
+  
+  console.log(`📦 Creating project structure...`);
+  
+  // Clean destination if it exists
+  if (fs.existsSync(dest)) {
+    await fse.remove(dest);
   }
   
   await fse.copy(templateDir, dest);
@@ -74,6 +83,7 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   
   // Configure Tailwind if requested
   if (useTailwind) {
+    console.log(`🎨 Setting up Tailwind CSS...`);
     if (templateType === "base") {
       await setupTailwindBase(dest);
     } else {
@@ -82,6 +92,7 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   }
   
   // Rename dotfiles that npm doesn't package
+  console.log(`📝 Configuring project...`);
   const filesToRename = [
     { from: "gitignore", to: ".gitignore" },
     { from: "env.example", to: ".env.example" },
@@ -96,15 +107,19 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   });
   
   // Initialize git repository
-  console.log("Initializing git repository...");
+  console.log(`🔧 Initializing git repository...`);
   try {
     execSync("git init", { cwd: dest, stdio: "pipe" });
   } catch (e) {
-    console.warn("Failed to initialize git (git may not be installed)");
+    console.warn("⚠️  Failed to initialize git (git may not be installed)");
   }
   
-  console.log("Project scaffolded to", dest);
-  console.log("Run: cd %s && bun install && bun run dev", name);
+  console.log(`\n✨ Project created successfully!\n`);
+  console.log(`📂 Location: ${dest}`);
+  console.log(`\n🚀 Next steps:`);
+  console.log(`   cd ${name}`);
+  console.log(`   bun install`);
+  console.log(`   bun run dev\n`);
 }
 
 // Helper functions for DRY refactoring
@@ -159,7 +174,7 @@ function updateAppVueImport(clientDir: string, importStatement: string) {
 }
 
 async function setupTailwindBase(projectDir: string) {
-  console.log("Setting up Tailwind CSS (base template)...");
+  console.log(`  🎨 Configuring Tailwind v4...`);
   
   const clientDir = path.join(projectDir, "src/client");
   
@@ -171,11 +186,11 @@ async function setupTailwindBase(projectDir: string) {
   // Create Tailwind CSS file with Tailwind v4 syntax
   fs.writeFileSync(path.join(clientDir, "index.css"), `@import "tailwindcss";\n`);
   
-  console.log("Tailwind CSS configured successfully!");
+  console.log(`  ✓ Tailwind CSS configured`);
 }
 
 async function setupTailwind(projectDir: string) {
-  console.log("Setting up Tailwind CSS...");
+  console.log(`  🎨 Configuring Tailwind v4...`);
   
   const clientDir = path.join(projectDir, "src/client");
   const clientTailwindDir = path.join(projectDir, "src/client-tailwind");
@@ -189,7 +204,7 @@ async function setupTailwind(projectDir: string) {
   if (fs.existsSync(clientTailwindDir)) {
     fs.renameSync(clientTailwindDir, clientDir);
   } else {
-    console.warn("client-tailwind directory not found, skipping Tailwind setup");
+    console.warn("  ⚠️  client-tailwind directory not found, skipping Tailwind setup");
     return;
   }
   
@@ -197,7 +212,7 @@ async function setupTailwind(projectDir: string) {
   createPostCssConfig(projectDir, { "@tailwindcss/postcss": {} });
   updateViteConfig(projectDir);
   
-  console.log("Tailwind CSS configured successfully!");
+  console.log(`  ✓ Tailwind CSS configured`);
 }
 
 async function runDev() {
