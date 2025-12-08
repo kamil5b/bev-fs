@@ -2,11 +2,13 @@ import { multipart } from "@elysiajs/multipart";
 import { handleListFiles, handleUploadFiles } from "../../handler/file.handler";
 
 /**
- * Apply multipart middleware to this route
- * Allows handling file uploads via form-data
+ * Apply per-method middleware
+ * Only POST requests need multipart middleware for file uploads
+ * GET requests don't need multipart
  */
-export const middleware = (app) => {
-  return app.use(multipart());
+export const middleware = {
+  POST: (app) => app.use(multipart()),
+  // GET doesn't need multipart middleware
 };
 
 /**

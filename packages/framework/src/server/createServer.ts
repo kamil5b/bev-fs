@@ -213,17 +213,22 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
               // Convert path to route: product/[id]/progress -> /product/:id/progress
               const route = "/api" + convertPathToRoute(nextPath);
               
-              // Create a scoped app for this route if middleware is defined
+              // Check if middleware is route-level or per-method
+              const routeMiddleware = mod.middleware && !mod.middleware.GET && !mod.middleware.POST && !mod.middleware.PUT && !mod.middleware.PATCH && !mod.middleware.DELETE
+                ? mod.middleware
+                : null;
+              
+              // Create a scoped app for this route if route-level middleware is defined
               let routeApp = app;
-              if (mod.middleware) {
+              if (routeMiddleware) {
                 // Create a new Elysia instance scoped to this route
                 const scopedApp = new Elysia({ prefix: route });
                 
                 // Apply route-level middleware
-                if (Array.isArray(mod.middleware)) {
-                  mod.middleware.forEach((middleware: any) => scopedApp.use(middleware));
-                } else if (typeof mod.middleware === "function") {
-                  scopedApp.use(mod.middleware);
+                if (Array.isArray(routeMiddleware)) {
+                  routeMiddleware.forEach((middleware: any) => scopedApp.use(middleware));
+                } else if (typeof routeMiddleware === "function") {
+                  scopedApp.use(routeMiddleware);
                 }
                 
                 routeApp = scopedApp;
@@ -237,14 +242,37 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
               ["GET", "POST", "PUT", "PATCH", "DELETE"].forEach((verb) => {
                 const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
                 if (handler) {
+                  // Check for per-method middleware
+                  const methodMiddleware = mod.middleware?.[verb];
+                  let methodApp = routeApp;
+                  
+                  if (methodMiddleware) {
+                    // Create a scoped app for this specific method
+                    const methodScopedApp = new Elysia({ prefix: route });
+                    
+                    // Apply method-level middleware
+                    if (Array.isArray(methodMiddleware)) {
+                      methodMiddleware.forEach((middleware: any) => methodScopedApp.use(middleware));
+                    } else if (typeof methodMiddleware === "function") {
+                      methodScopedApp.use(methodMiddleware);
+                    }
+                    
+                    methodApp = methodScopedApp;
+                  }
+                  
                   // @ts-ignore
-                  routeApp[verb.toLowerCase()](route === "/api" ? "/" : "", handler);
+                  methodApp[verb.toLowerCase()](route === "/api" ? "/" : "", handler);
                   console.log(`Registering route: ${verb} ${route} from ${entry}/index.ts`);
+                  
+                  // Register method-scoped app if it has method-specific middleware
+                  if (methodMiddleware && methodApp !== routeApp && methodApp !== app) {
+                    app.use(methodApp);
+                  }
                 }
               });
               
-              // Register scoped app with main app if middleware was used
-              if (mod.middleware && routeApp !== app) {
+              // Register scoped app with main app if route-level middleware was used
+              if (routeMiddleware && routeApp !== app) {
                 app.use(routeApp);
               }
             }
