@@ -6,6 +6,14 @@
         <option value="in-progress">In Progress</option>
         <option value="completed">Completed</option>
       </select>
+      <input
+        v-model.number="formData.percentage"
+        type="number"
+        min="0"
+        max="100"
+        placeholder="Progress percentage"
+        class="input"
+      />
       <textarea 
         v-model="formData.description" 
         placeholder="Progress description" 
@@ -22,24 +30,26 @@ import { ref, watch } from 'vue';
 interface Props {
   initialStatus?: string;
   initialDescription?: string;
+  initialPercentage?: number;
   buttonLabel?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   initialStatus: 'planning',
   initialDescription: '',
+  initialPercentage: 0,
   buttonLabel: 'Submit'
 });
 
 const emit = defineEmits<{
   submit: [];
-  update: [data: { status: string; description: string }];
+  update: [data: { status: string; description: string; percentage: number }];
 }>();
 
-const formData = ref({ status: 'planning', description: '' });
+const formData = ref({ status: 'planning', description: '', percentage: 0 });
 
 watch(
-  () => [formData.value.status, formData.value.description],
+  () => [formData.value.status, formData.value.description, formData.value.percentage],
   () => {
     emit('update', formData.value);
   },

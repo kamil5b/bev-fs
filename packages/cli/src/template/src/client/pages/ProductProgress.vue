@@ -47,6 +47,14 @@
         <option value="in-progress">In Progress</option>
         <option value="completed">Completed</option>
       </select>
+      <input
+        v-model.number="editForm.percentage"
+        type="number"
+        min="0"
+        max="100"
+        placeholder="Progress percentage"
+        class="input"
+      />
       <textarea v-model="editForm.description" class="input"></textarea>
     </Modal>
   </div>

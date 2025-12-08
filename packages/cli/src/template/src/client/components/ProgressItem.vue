@@ -5,6 +5,7 @@
       <span class="date">{{ new Date(progress.updatedAt).toLocaleDateString() }}</span>
     </div>
     <p class="description">{{ progress.description }}</p>
+    <p class="percentage">Progress: {{ progress.percentage }}%</p>
     <div class="action-buttons">
       <button @click="$emit('edit')" class="btn btn-sm btn-primary">Edit</button>
       <button @click="$emit('delete')" class="btn btn-sm btn-danger">Delete</button>
@@ -26,6 +27,11 @@ defineEmits<{
 </script>
 
 <style scoped>
+.percentage {
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
 .progress-item {
   border: 1px solid #eee;
   border-radius: 4px;

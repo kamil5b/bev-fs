@@ -41,22 +41,45 @@ export const productRepository = {
 
   // Progress operations
   getProgressByProductId(productId: number) {
-    return store.getProgressByProductId(productId);
+    return store.productProgress.filter(p => p.productId === productId);
   },
 
-  getProgressById(productId: number, progressId: number) {
-    return store.getProgressById(productId, progressId);
+  getProgressById(productId: number, id: number) {
+    return store.productProgress.find(p => p.productId === productId && p.id === id);
   },
 
   createProgress(productId: number, data: ProgressRequest.Create) {
-    return store.createProgress(productId, data);
+    // Find max id for this product
+    const maxId = store.productProgress
+      .filter(p => p.productId === productId)
+      .reduce((max, p) => Math.max(max, p.id), 0);
+    const newProgress = {
+      id: maxId + 1,
+      percentage: data.percentage,
+      productId, // always use the argument
+      status: data.status || 'pending',
+      description: data.description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    store.productProgress.push(newProgress);
+    return newProgress;
   },
 
-  updateProgress(productId: number, progressId: number, data: ProgressRequest.Update) {
-    return store.updateProgress(productId, progressId, data);
+  updateProgress(productId: number, id: number, data: ProgressRequest.Update) {
+    const progress = store.productProgress.find(p => p.productId === productId && p.id === id);
+    if (!progress) return null;
+    if (data.percentage !== undefined) progress.percentage = data.percentage;
+    if (data.description !== undefined) progress.description = data.description;
+    if (data.status !== undefined) progress.status = data.status;
+    progress.updatedAt = new Date().toISOString();
+    return progress;
   },
 
-  deleteProgress(productId: number, progressId: number): boolean {
-    return store.deleteProgress(productId, progressId) === 1;
+  deleteProgress(productId: number, id: number) {
+    const index = store.productProgress.findIndex(p => p.productId === productId && p.id === id);
+    if (index === -1) return false;
+    store.productProgress.splice(index, 1);
+    return true;
   }
 };
