@@ -213,8 +213,24 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
               // Convert path to route: product/[id]/progress -> /product/:id/progress
               const route = "/api" + convertPathToRoute(nextPath);
               
+              // Create a scoped app for this route if middleware is defined
+              let routeApp = app;
+              if (mod.middleware) {
+                // Create a new Elysia instance scoped to this route
+                const scopedApp = new Elysia({ prefix: route });
+                
+                // Apply route-level middleware
+                if (Array.isArray(mod.middleware)) {
+                  mod.middleware.forEach((middleware: any) => scopedApp.use(middleware));
+                } else if (typeof mod.middleware === "function") {
+                  scopedApp.use(mod.middleware);
+                }
+                
+                routeApp = scopedApp;
+              }
+              
               if (mod.default) {
-                app.get(route, mod.default as any);
+                routeApp.get("/", mod.default as any);
               }
               
               // Allow named exports: GET, POST, PUT, PATCH, DELETE
@@ -222,10 +238,15 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
                 const handler = mod[verb] || (verb === "DELETE" && mod.delete_handler);
                 if (handler) {
                   // @ts-ignore
-                  app[verb.toLowerCase()](route, handler);
+                  routeApp[verb.toLowerCase()](route === "/api" ? "/" : "", handler);
                   console.log(`Registering route: ${verb} ${route} from ${entry}/index.ts`);
                 }
               });
+              
+              // Register scoped app with main app if middleware was used
+              if (mod.middleware && routeApp !== app) {
+                app.use(routeApp);
+              }
             }
             
             // Continue recursing for nested directories

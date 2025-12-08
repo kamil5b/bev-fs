@@ -15,3 +15,12 @@ export function createLoggingMiddleware() {
     });
   };
 }
+
+export function createRouteCustomMiddleware() {
+  return (app: Elysia) => {
+    app.derive((context) => {
+      console.log('This is custom route middleware example');
+      return {};
+    });
+  };
+}
