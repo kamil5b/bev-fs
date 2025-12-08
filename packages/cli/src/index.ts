@@ -82,20 +82,18 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   }
   
   // Rename dotfiles that npm doesn't package
-  const gitignoreSrc = path.join(dest, "gitignore");
-  if (fs.existsSync(gitignoreSrc)) {
-    fs.renameSync(gitignoreSrc, path.join(dest, ".gitignore"));
-  }
+  const filesToRename = [
+    { from: "gitignore", to: ".gitignore" },
+    { from: "env.example", to: ".env.example" },
+    { from: "bunfig-template.toml", to: "bunfig.toml" },
+  ];
   
-  const envExample = path.join(dest, "env.example");
-  if (fs.existsSync(envExample)) {
-    fs.renameSync(envExample, path.join(dest, ".env.example"));
-  }
-  
-  const bunfigSrc = path.join(dest, "bunfig-template.toml");
-  if (fs.existsSync(bunfigSrc)) {
-    fs.renameSync(bunfigSrc, path.join(dest, "bunfig.toml"));
-  }
+  filesToRename.forEach(({ from, to }) => {
+    const src = path.join(dest, from);
+    if (fs.existsSync(src)) {
+      fs.renameSync(src, path.join(dest, to));
+    }
+  });
   
   // Initialize git repository
   console.log("Initializing git repository...");
@@ -109,12 +107,8 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
   console.log("Run: cd %s && bun install && bun run dev", name);
 }
 
-async function setupTailwindBase(projectDir: string) {
-  console.log("Setting up Tailwind CSS (base template)...");
-  
-  const clientDir = path.join(projectDir, "src/client");
-  
-  // Update package.json with Tailwind dependencies
+// Helper functions for DRY refactoring
+function updatePackageJson(projectDir: string, deps: Record<string, string>) {
   const packageJsonPath = path.join(projectDir, "package.json");
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
   
@@ -122,27 +116,12 @@ async function setupTailwindBase(projectDir: string) {
     packageJson.devDependencies = {};
   }
   
-  packageJson.devDependencies["@tailwindcss/postcss"] = "*";
+  Object.assign(packageJson.devDependencies, deps);
   
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
-  
-  // Create postcss.config.js for Tailwind v4
-  const postcssConfigContent = `export default {
-  plugins: {
-    "@tailwindcss/postcss": {},
-  },
 }
-`;
-  
-  fs.writeFileSync(path.join(projectDir, "postcss.config.js"), postcssConfigContent);
-  
-  // Create Tailwind CSS file with Tailwind v4 syntax
-  const tailwindCssContent = `@import "tailwindcss";
-`;
-  
-  fs.writeFileSync(path.join(clientDir, "index.css"), tailwindCssContent);
-  
-  // Update Vite config to include PostCSS
+
+function updateViteConfig(projectDir: string) {
   const viteConfigPath = path.join(projectDir, "vite.config.ts");
   let viteConfig = fs.readFileSync(viteConfigPath, "utf-8");
   
@@ -156,18 +135,41 @@ async function setupTailwindBase(projectDir: string) {
     );
     fs.writeFileSync(viteConfigPath, viteConfig);
   }
-  
-  // Update App.vue to import Tailwind CSS
+}
+
+function createPostCssConfig(projectDir: string, plugins: Record<string, object>) {
+  const postcssConfigContent = `export default {
+  plugins: ${JSON.stringify(plugins, null, 4)},
+}
+`;
+  fs.writeFileSync(path.join(projectDir, "postcss.config.js"), postcssConfigContent);
+}
+
+function updateAppVueImport(clientDir: string, importStatement: string) {
   const appVuePath = path.join(clientDir, "App.vue");
   let appVueContent = fs.readFileSync(appVuePath, "utf-8");
   
   if (!appVueContent.includes("index.css")) {
     appVueContent = appVueContent.replace(
       "<script setup lang=\"ts\">\n</script>",
-      "<script setup lang=\"ts\">\nimport './index.css';\n</script>"
+      `<script setup lang="ts">\n${importStatement}\n</script>`
     );
     fs.writeFileSync(appVuePath, appVueContent);
   }
+}
+
+async function setupTailwindBase(projectDir: string) {
+  console.log("Setting up Tailwind CSS (base template)...");
+  
+  const clientDir = path.join(projectDir, "src/client");
+  
+  updatePackageJson(projectDir, { "@tailwindcss/postcss": "*" });
+  createPostCssConfig(projectDir, { "@tailwindcss/postcss": {} });
+  updateViteConfig(projectDir);
+  updateAppVueImport(clientDir, "import './index.css';");
+  
+  // Create Tailwind CSS file with Tailwind v4 syntax
+  fs.writeFileSync(path.join(clientDir, "index.css"), `@import "tailwindcss";\n`);
   
   console.log("Tailwind CSS configured successfully!");
 }
@@ -191,128 +193,11 @@ async function setupTailwind(projectDir: string) {
     return;
   }
   
-  // Update package.json with Tailwind dependencies
-  const packageJsonPath = path.join(projectDir, "package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-  
-  if (!packageJson.devDependencies) {
-    packageJson.devDependencies = {};
-  }
-  
-  packageJson.devDependencies["@tailwindcss/postcss"] = "*";
-  
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
-  
-  // Create postcss.config.js for Tailwind v4
-  const postcssConfigContent = `export default {
-  plugins: {
-    "@tailwindcss/postcss": {},
-  },
-}
-`;
-  
-  fs.writeFileSync(path.join(projectDir, "postcss.config.js"), postcssConfigContent);
-  
-  // Update Vite config to include PostCSS
-  const viteConfigPath = path.join(projectDir, "vite.config.ts");
-  let viteConfig = fs.readFileSync(viteConfigPath, "utf-8");
-  
-  if (!viteConfig.includes("postcss")) {
-    // Add CSS configuration if it doesn't exist
-    viteConfig = viteConfig.replace(
-      "export default defineConfig({",
-      `export default defineConfig({
-  css: {
-    postcss: './postcss.config.js',
-  },`
-    );
-    fs.writeFileSync(viteConfigPath, viteConfig);
-  }
+  updatePackageJson(projectDir, { "@tailwindcss/postcss": "*" });
+  createPostCssConfig(projectDir, { "@tailwindcss/postcss": {} });
+  updateViteConfig(projectDir);
   
   console.log("Tailwind CSS configured successfully!");
-}
-
-async function configureTailwind(projectDir: string) {
-  console.log("Configuring Tailwind CSS...");
-  
-  // Update package.json with Tailwind dependencies
-  const packageJsonPath = path.join(projectDir, "package.json");
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-  
-  if (!packageJson.devDependencies) {
-    packageJson.devDependencies = {};
-  }
-  
-  packageJson.devDependencies.tailwindcss = "*";
-  packageJson.devDependencies.postcss = "*";
-  packageJson.devDependencies["autoprefixer"] = "*";
-  
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
-  
-  // Create tailwind.config.js
-  const tailwindConfigContent = `export default {
-  content: [
-    "./src/client/index.html",
-    "./src/client/App.vue",
-    "./src/client/components/**/*.{vue,js,ts,jsx,tsx}",
-    "./src/client/pages/**/*.{vue,js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-`;
-  
-  fs.writeFileSync(path.join(projectDir, "tailwind.config.js"), tailwindConfigContent);
-  
-  // Create postcss.config.js
-  const postcssConfigContent = `export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
-`;
-  
-  fs.writeFileSync(path.join(projectDir, "postcss.config.js"), postcssConfigContent);
-  
-  // Create Tailwind CSS file
-  const tailwindCssContent = `@tailwind base;
-@tailwind components;
-@tailwind utilities;
-`;
-  
-  const clientDir = path.join(projectDir, "src/client");
-  fs.writeFileSync(path.join(clientDir, "index.css"), tailwindCssContent);
-  
-  // Update Vite config to include PostCSS
-  const viteConfigPath = path.join(projectDir, "vite.config.ts");
-  let viteConfig = fs.readFileSync(viteConfigPath, "utf-8");
-  
-  if (!viteConfig.includes("postcss")) {
-    // Add CSS configuration if it doesn't exist
-    viteConfig = viteConfig.replace(
-      "export default defineConfig({",
-      `export default defineConfig({
-  css: {
-    postcss: './postcss.config.js',
-  },`
-    );
-    fs.writeFileSync(viteConfigPath, viteConfig);
-  }
-  
-  // Update App.vue to import Tailwind CSS
-  const appVuePath = path.join(clientDir, "App.vue");
-  const appVueContent = fs.readFileSync(appVuePath, "utf-8");
-  
-  if (!appVueContent.includes("index.css")) {
-    const updatedAppVue = appVueContent.replace(
-      "<script",
-      "<script>\nimport './index.css';\n</script>\n\n<script"
-    );
-    fs.writeFileSync(appVuePath, updatedAppVue);
-  }
 }
 
 async function runDev() {
@@ -348,21 +233,19 @@ async function main(argv = process.argv.slice(2)) {
   const name = cmd;
   if (!name) throw new Error("missing project name");
   
-  // Check for template flags
-  let templateType: string | undefined;
-  if (argv.includes("--base-template")) {
-    templateType = "base";
-  } else if (argv.includes("--full-template")) {
-    templateType = "full";
-  }
+  // Parse template flag
+  const templateType = argv.includes("--base-template")
+    ? "base"
+    : argv.includes("--full-template")
+      ? "full"
+      : undefined;
   
-  // Check for Tailwind flags
-  let useTailwind: boolean | undefined;
-  if (argv.includes("--with-tailwind")) {
-    useTailwind = true;
-  } else if (argv.includes("--no-tailwind")) {
-    useTailwind = false;
-  }
+  // Parse Tailwind flag
+  const useTailwind = argv.includes("--with-tailwind")
+    ? true
+    : argv.includes("--no-tailwind")
+      ? false
+      : undefined;
   
   await createProject(name, templateType, useTailwind);
 }
