@@ -30,6 +30,13 @@
       />
     </div>
 
+    <!-- File Upload Section -->
+    <div class="file-upload-section">
+      <h2>File Management</h2>
+      <p>Upload and manage your files:</p>
+      <FileUpload />
+    </div>
+
     <!-- Edit Modal -->
     <Modal 
       :isOpen="editingProduct !== null"
@@ -53,6 +60,7 @@ import ProductForm from '../components/ProductForm.vue';
 import ProductTable from '../components/ProductTable.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
+import FileUpload from '../components/FileUpload.vue';
 
 const router = useRouter();
 const { list, create, remove, update } = useProductAPI();
@@ -154,6 +162,23 @@ async function saveEdit() {
 }
 
 .crud-section p {
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.file-upload-section {
+  background: #f5f5f5;
+  padding: 2rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.file-upload-section h2 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.file-upload-section p {
   color: #666;
   margin-bottom: 1.5rem;
 }
