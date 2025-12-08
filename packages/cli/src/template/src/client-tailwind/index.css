@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@layer base {
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-slate-900;
+  }
+
+  h1 {
+    @apply text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply text-xl;
+  }
+
+  a {
+    @apply text-indigo-600 hover:text-indigo-700 transition-colors;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 cursor-pointer border border-transparent;
+  }
+
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800;
+  }
+
+  .btn-secondary {
+    @apply bg-slate-200 text-slate-900 hover:bg-slate-300 active:bg-slate-400;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 active:bg-red-800;
+  }
+
+  .btn-info {
+    @apply bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1 text-sm;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all;
+  }
+
+  .input:disabled {
+    @apply bg-slate-100 cursor-not-allowed;
+  }
+
+  .form-group {
+    @apply flex flex-col gap-3;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow;
+  }
+
+  .badge {
+    @apply inline-block px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .badge-planning {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .badge-in-progress {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .badge-completed {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+}
