@@ -1,4 +1,5 @@
 import { multipart } from "@elysiajs/multipart";
+import { Elysia } from "elysia";
 
 /**
  * Example of route-level middleware (multiple)
@@ -9,7 +10,7 @@ import { multipart } from "@elysiajs/multipart";
  * - An array of functions for multiple middlewares
  */
 export const middleware = [
-  (app: any) => app.use(multipart()),
+  (app: Elysia) => app.use(multipart()),
   // Add more middlewares here as needed
   // (app) => app.use(authMiddleware()),
   // (app) => app.use(validationMiddleware()),
