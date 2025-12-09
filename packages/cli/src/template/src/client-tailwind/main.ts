@@ -5,5 +5,10 @@ import App from './App.vue';
 // Note: Vite's import.meta.glob must have a static string pattern
 const routeModules = import.meta.glob<any>("./router/**/*.vue", { eager: true });
 
-const { app } = createFrameworkApp(App, { routeModules });
-app.mount('#app');
+const { app, router } = createFrameworkApp(App, { routeModules });
+
+// Wait for router to be ready before mounting
+router.isReady().then(() => {
+  app.mount('#app');
+  console.log('✅ App mounted and router is ready');
+});

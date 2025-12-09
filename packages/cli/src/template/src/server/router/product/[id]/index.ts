@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import type { ProductRequest } from '../../../shared';
 import { getProduct, updateProduct, deleteProduct } from '../../../handler/product.handler';
 
 /**
@@ -23,16 +24,16 @@ export const middleware = [
 ];
 
 // GET /api/product/:id - get a product by id
-export const GET = ({ params }: any) => {
+export const GET = ({ params }: { params: Record<string, string> }) => {
   return getProduct(params);
 };
 
 // PATCH /api/product/:id - update a product (requires ownership)
-export const PATCH = ({ params, body }: any) => {
+export const PATCH = ({ params, body }: { params: Record<string, string>; body: ProductRequest.Update }) => {
   return updateProduct(params, body);
 };
 
 // DELETE /api/product/:id - delete a product (requires admin)
-export const DELETE = ({ params }: any) => {
+export const DELETE = ({ params }: { params: Record<string, string> }) => {
   return deleteProduct(params);
 };

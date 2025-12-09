@@ -3,7 +3,6 @@
     <PageHeader 
       title="Product Progress"
       backTo="/"
-      backLabel="← Back to Products"
     />
 
     <div v-if="product" class="progress-content">
@@ -43,9 +42,10 @@
       @save="saveEdit"
     >
       <select v-model="editForm.status" class="input">
-        <option value="planning">Planning</option>
+        <option value="pending">Pending</option>
         <option value="in-progress">In Progress</option>
         <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
       </select>
       <input
         v-model.number="editForm.percentage"
@@ -62,7 +62,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useAppRouter, useAppRoute } from 'bev-fs';
 import { useProductAPI } from '../composables/useProductAPI';
 import { Product, Progress } from '../../shared';
 import PageHeader from '../components/PageHeader.vue';
@@ -72,24 +72,40 @@ import ProgressForm from '../components/ProgressForm.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 
-const router = useRouter();
-const route = useRoute();
+const router = useAppRouter();
+const route = useAppRoute();
 const { get, listProgress, createProgress, updateProgress, deleteProgress: removeProgress } = useProductAPI();
 const product = ref<Product | null>(null);
 const progresses = ref<Progress[]>([]);
 const editing = ref(false);
 const editingId = ref<number | null>(null);
-const newProgress = ref({ status: 'planning', description: '' });
-const editForm = ref({ status: 'planning', description: '' });
+const newProgress = ref({ status: 'pending' as const, description: '', percentage: 0 });
+const editForm = ref({ status: 'pending' as const, description: '', percentage: 0 });
 
 onMounted(async () => {
   const productId = Number(route.params.id);
   try {
     const data = await get(productId);
+    
+    // Check if response is an error
+    if ('error' in data) {
+      console.error('Failed to load product:', data);
+      router.push('/');
+      return;
+    }
+    
     product.value = data.product;
     
     // Load progress items for this product
     const progressData = await listProgress(productId);
+    
+    // Check if progress response is an error
+    if ('error' in progressData) {
+      console.error('Failed to load progress:', progressData);
+      progresses.value = [];
+      return;
+    }
+    
     progresses.value = progressData.progress;
   } catch (error) {
     console.error('Failed to load product:', error);
@@ -105,8 +121,15 @@ async function addProgress() {
       product.value.id,
       newProgress.value
     );
+    
+    // Check if response is an error
+    if ('error' in response) {
+      console.error('Failed to add progress:', response);
+      return;
+    }
+    
     progresses.value.push(response.created);
-    newProgress.value = { status: 'planning', description: '' };
+    newProgress.value = { status: 'pending' as const, description: '', percentage: 0 };
   } catch (error) {
     console.error('Failed to add progress:', error);
   }
@@ -130,7 +153,14 @@ async function saveEdit() {
       editingId.value,
       editForm.value
     );
-    const index = progresses.value.findIndex(p => p.id === editingId.value);
+    
+    // Check if response is an error
+    if ('error' in response) {
+      console.error('Failed to update progress:', response);
+      return;
+    }
+    
+    const index = progresses.value.findIndex((p: any) => p.id === editingId.value);
     if (index !== -1) {
       progresses.value[index] = response.updated;
     }
@@ -146,7 +176,7 @@ async function deleteProgress(id: number) {
 
   try {
     await removeProgress(product.value.id, id);
-    progresses.value = progresses.value.filter(p => p.id !== id);
+    progresses.value = progresses.value.filter((p: any) => p.id !== id);
   } catch (error) {
     console.error('Failed to delete progress:', error);
   }

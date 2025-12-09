@@ -57,16 +57,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useAppRouter } from 'bev-fs';
 import { useProductAPI } from '../composables/useProductAPI';
-import { Product } from '../../../../base/src/shared';
+import { Product } from '../../shared';
 import ProductForm from '../components/ProductForm.vue';
 import ProductTable from '../components/ProductTable.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import FileUpload from '../components/FileUpload.vue';
 
-const router = useRouter();
+const router = useAppRouter();
 const { list, create, remove, update } = useProductAPI();
 const products = ref<Product[]>([]);
 const loading = ref(false);
@@ -81,7 +81,7 @@ async function loadProducts() {
   loading.value = true;
   try {
     const data = await list();
-    products.value = data.products;
+    products.value = data.products || [];
   } finally {
     loading.value = false;
   }
@@ -94,7 +94,10 @@ async function addProduct() {
   }
 
   const response = await create(newProduct.value);
-  products.value.push(response.created);
+  
+  if (Array.isArray(products.value)) {
+    products.value.push(response.created);
+  }
   newProduct.value = { name: '', price: 0 };
 }
 
@@ -104,7 +107,7 @@ async function deleteProduct(id: number) {
   }
 
   await remove(id);
-  products.value = products.value.filter(p => p.id !== id);
+  products.value = products.value.filter((p: any) => p.id !== id);
 }
 
 function viewProgress(productId: number) {
@@ -120,7 +123,8 @@ async function saveEdit() {
 
   try {
     const updated = await update(editingProduct.value.id, editingProduct.value);
-    const index = products.value.findIndex(p => p.id === updated.updated.id);
+    
+    const index = products.value.findIndex((p: any) => p.id === updated.updated.id);
     if (index >= 0) {
       products.value[index] = updated.updated;
     }

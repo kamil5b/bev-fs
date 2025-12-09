@@ -29,7 +29,7 @@ export const middleware = [
  * Example with curl:
  * curl http://localhost:3000/api/file/document.pdf -O
  */
-export const GET = async ({ params, set }: any) => {
+export const GET = async ({ params, set }: { params: Record<string, string>; set: Record<string, any> }) => {
   const { fileName } = params;
   return await handleDownloadFile(fileName, { set });
 };
@@ -41,7 +41,7 @@ export const GET = async ({ params, set }: any) => {
  * Example with curl:
  * curl -X DELETE http://localhost:3000/api/file/document.pdf
  */
-export const DELETE = async ({ params, set }: any) => {
+export const DELETE = async ({ params, set }: { params: Record<string, string>; set: Record<string, any> }) => {
   const { fileName } = params;
   return await handleDeleteFile(fileName, { set });
 };

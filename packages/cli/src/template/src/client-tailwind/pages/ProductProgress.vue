@@ -53,9 +53,10 @@
       >
         <label class="text-sm font-medium text-slate-700">Status</label>
         <select v-model="editForm.status" class="input">
-          <option value="planning">Planning</option>
+          <option value="pending">Pending</option>
           <option value="in-progress">In Progress</option>
           <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
         </select>
         <label class="text-sm font-medium text-slate-700">Percentage</label>
         <input
@@ -75,9 +76,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useAppRouter, useAppRoute } from 'bev-fs';
 import { useProductAPI } from '../composables/useProductAPI';
-import { Product, Progress } from '../../../../base/src/shared';
+import { Product, Progress } from '../../shared';
 import PageHeader from '../components/PageHeader.vue';
 import ProductDetail from '../components/ProductDetail.vue';
 import ProgressItem from '../components/ProgressItem.vue';
@@ -85,15 +86,15 @@ import ProgressForm from '../components/ProgressForm.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 
-const router = useRouter();
-const route = useRoute();
+const router = useAppRouter();
+const route = useAppRoute();
 const { get, listProgress, createProgress, updateProgress, deleteProgress: removeProgress } = useProductAPI();
 const product = ref<Product | null>(null);
 const progresses = ref<Progress[]>([]);
 const editing = ref(false);
 const editingProgress = ref<Progress | null>(null);
-const editForm = ref({ status: 'planning', description: '', percentage: 0 });
-const newProgress = ref({ status: 'planning', description: '', percentage: 0 });
+const editForm = ref({ status: 'pending' as const, description: '', percentage: 0 });
+const newProgress = ref({ status: 'pending' as const, description: '', percentage: 0 });
 
 onMounted(async () => {
   const id = Number(route.params.id);
@@ -115,7 +116,7 @@ async function addProgress() {
   try {
     const response = await createProgress(product.value.id, newProgress.value);
     progresses.value.push(response.created);
-    newProgress.value = { status: 'planning', description: '', percentage: 0 };
+    newProgress.value = { status: 'pending' as const, description: '', percentage: 0 };
   } catch (error) {
     console.error('Failed to add progress:', error);
   }
@@ -132,9 +133,11 @@ async function saveEdit() {
 
   try {
     const updated = await updateProgress(product.value.id, editingProgress.value.id, editForm.value);
-    const index = progresses.value.findIndex(p => p.id === updated.updated.id);
-    if (index >= 0) {
-      progresses.value[index] = updated.updated;
+    if (updated && updated.updated && updated.updated.id) {
+      const index = progresses.value.findIndex((p: any) => p.id === updated.updated.id);
+      if (index >= 0) {
+        progresses.value[index] = updated.updated;
+      }
     }
     editing.value = false;
     editingProgress.value = null;
@@ -152,7 +155,7 @@ async function deleteProgress(id: number) {
 
   try {
     await removeProgress(product.value.id, id);
-    progresses.value = progresses.value.filter(p => p.id !== id);
+    progresses.value = progresses.value.filter((p: Progress) => p.id !== id);
   } catch (error) {
     console.error('Failed to delete progress:', error);
   }

@@ -211,6 +211,37 @@ export const POST = async ({ body }) => {
 
 ---
 
+### 2.5. `useAppRouter()` and `useAppRoute()` — Client-side routing composables
+
+Vue composables to access the router and current route in your components. These work around Vue Router's plugin injection issues and provide a clean API.
+
+```typescript
+import { useAppRouter, useAppRoute } from "bev-fs";
+
+export default {
+  setup() {
+    const router = useAppRouter();
+    const route = useAppRoute();
+
+    const navigateToProduct = (id: string) => {
+      router?.push(`/product/${id}`);
+    };
+
+    const productId = route?.params?.id;
+
+    return { navigateToProduct, productId };
+  }
+};
+```
+
+**Returns:**
+- `useAppRouter()` — Vue Router instance with `push()`, `replace()`, etc.
+- `useAppRoute()` — Current route object with `params`, `query`, `path`, etc.
+
+**Why custom composables?** Vue Router's `useRouter()` and `useRoute()` composables don't work reliably with the framework's app initialization. These custom composables provide the same functionality with proper global property fallback.
+
+---
+
 ### 3. `createRoute()` — Type-safe route definitions
 
 Helper function to create a type-safe route definition with API integration:

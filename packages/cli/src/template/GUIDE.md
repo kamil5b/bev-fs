@@ -211,6 +211,37 @@ export const POST = async ({ body }) => {
 
 ---
 
+### 2.5. `useAppRouter()` and `useAppRoute()` — Client-side routing composables
+
+Vue composables to access the router and current route in your components. These work around Vue Router's plugin injection issues and provide a clean API.
+
+```typescript
+import { useAppRouter, useAppRoute } from "bev-fs";
+
+export default {
+  setup() {
+    const router = useAppRouter();
+    const route = useAppRoute();
+
+    const navigateToProduct = (id: string) => {
+      router?.push(`/product/${id}`);
+    };
+
+    const productId = route?.params?.id;
+
+    return { navigateToProduct, productId };
+  }
+};
+```
+
+**Returns:**
+- `useAppRouter()` — Vue Router instance with `push()`, `replace()`, etc.
+- `useAppRoute()` — Current route object with `params`, `query`, `path`, etc.
+
+**Why custom composables?** Vue Router's `useRouter()` and `useRoute()` composables don't work reliably with the framework's app initialization. These custom composables provide the same functionality with proper global property fallback.
+
+---
+
 ### 3. `createRoute()` — Type-safe route definitions
 
 Helper function to create a type-safe route definition with API integration:
@@ -415,15 +446,84 @@ export interface ProductResponse {
 
 ```typescript
 // src/client/composables/useProductAPI.ts
-import type { ProductResponse } from "@/shared/responses/product.response";
+import type { ProductResponse, ErrorResponse } from "@/shared";
 
 export function useProductAPI() {
-  const getProduct = async (id: string): Promise<ProductResponse> => {
-    const res = await fetch(`/api/product/${id}`);
-    return res.json();
+  const getProduct = async (id: string): Promise<ProductResponse | ErrorResponse> => {
+    try {
+      const res = await fetch(`/api/product/${id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
+    }
   };
 
   return { getProduct };
+}
+```
+
+#### Shared Types Overview
+
+The framework provides several shared type definitions for type-safe communication:
+
+**Entity Types** — Data models:
+- `Product` — Product entity with id, name, price
+- `Progress` — Progress tracking entity with status, percentage, description
+- `UploadedFile` — File metadata with fileName, url, size
+
+**Request Types** — API request payloads:
+- `ProductRequest.Create` — Create product payload
+- `ProductRequest.Update` — Update product payload
+- `ProgressRequest.Create` — Create progress payload
+- `ProgressRequest.Update` — Update progress payload
+
+**Response Types** — API response objects:
+- `ProductResponse.GetList` — List products response
+- `ProductResponse.GetById` — Get single product response
+- `ProductResponse.Create` — Create product response
+- `ProductResponse.Update` — Update product response
+- `ProductResponse.Delete` — Delete product response
+- `ProgressResponse.GetList` — List progress response
+- `ProgressResponse.Create` — Create progress response
+- `ProgressResponse.Update` — Update progress response
+- `ProgressResponse.Delete` — Delete progress response
+- `FileUploadResponse` — Upload files response with array of `UploadedFile`
+- `FileDeleteResponse` — Delete file response
+- `FileListResponse` — List files response with array of `UploadedFile`
+- `ErrorResponse` — Error response with `success: false` and error message
+
+**Enums** — Type-safe enumerations:
+- `ProgressStatus` — Values: `'pending'`, `'in-progress'`, `'completed'`, `'failed'`
+
+#### Error Handling Pattern
+
+Use the discriminated union pattern with `ErrorResponse`:
+
+```typescript
+import type { ProductResponse, ErrorResponse } from "@/shared";
+
+const response = await api.getProduct(id);
+
+if ('product' in response) {
+  // Success case
+  console.log(response.product);
+} else {
+  // Error case (ErrorResponse)
+  console.error(response.message);
+}
+```
+
+Or use success flag:
+
+```typescript
+const response = await api.getProduct(id);
+
+if (response.success === false) {
+  console.error(response.message);
+} else {
+  console.log(response.product);
 }
 ```
 

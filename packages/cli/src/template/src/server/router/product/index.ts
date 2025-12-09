@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import type { ProductRequest } from '../../shared';
 import { getProducts, createProduct } from '../../handler/product.handler';
 
 /**
@@ -20,6 +21,6 @@ export const GET = () => {
 
 // POST /api/product - create a product
 // Method-specific middleware just for POST
-export const POST = ({ body }: any) => {
+export const POST = ({ body }: { body: ProductRequest.Create }) => {
   return createProduct(body);
 };

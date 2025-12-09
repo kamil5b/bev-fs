@@ -1,3 +1,4 @@
+import type { FileUploadResponse, FileDeleteResponse, FileListResponse } from '../shared';
 import { defaultFileService } from "../service/file.service";
 import path from "path";
 
@@ -82,15 +83,19 @@ function validateFile(file: File): { valid: boolean; error?: string } {
  */
 export const handleListFiles = async () => {
   try {
-    const files = await defaultFileService.listFiles();
+    const response = await defaultFileService.listFiles();
+
+    if (!response.success) {
+      return {
+        success: false,
+        message: "Failed to list files"
+      };
+    }
 
     return {
       success: true,
-      files: files.map(fileName => ({
-        fileName,
-        url: `/uploads/${fileName}`
-      })),
-      count: files.length
+      files: response.files,
+      count: response.files.length
     };
   } catch (error) {
     console.error("List files error:", error);
@@ -146,13 +151,23 @@ export const handleUploadFiles = async (files: File[], context?: any) => {
       };
     }
 
-    const results = await defaultFileService.uploadFiles(files);
+    const response = await defaultFileService.uploadFiles(files);
+
+    if (!response.success) {
+      if (context) {
+        context.set.status = 500;
+      }
+      return {
+        success: false,
+        message: "Upload failed"
+      };
+    }
 
     return {
       success: true,
       message: "Files uploaded successfully",
-      files: results,
-      count: results.length
+      files: response.files,
+      count: response.files.length
     };
   } catch (error) {
     console.error("Upload error:", error);
@@ -250,9 +265,9 @@ export const handleDeleteFile = async (fileName: string, context?: any) => {
       };
     }
 
-    const success = await defaultFileService.deleteFile(fileName);
+    const response = await defaultFileService.deleteFile(fileName);
 
-    if (success) {
+    if (response.success) {
       return {
         success: true,
         message: `File '${fileName}' deleted successfully`

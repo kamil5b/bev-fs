@@ -2,9 +2,10 @@
   <div class="progress-form">
     <div class="form-group">
       <select v-model="formData.status" class="input">
-        <option value="planning">Planning</option>
+        <option value="pending">Pending</option>
         <option value="in-progress">In Progress</option>
         <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
       </select>
       <input
         v-model.number="formData.percentage"
@@ -26,16 +27,17 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import type { ProgressStatus } from '../../shared';
 
 interface Props {
-  initialStatus?: string;
+  initialStatus?: ProgressStatus;
   initialDescription?: string;
   initialPercentage?: number;
   buttonLabel?: string;
 }
 
 withDefaults(defineProps<Props>(), {
-  initialStatus: 'planning',
+  initialStatus: 'pending' as ProgressStatus,
   initialDescription: '',
   initialPercentage: 0,
   buttonLabel: 'Submit'
@@ -43,10 +45,14 @@ withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   submit: [];
-  update: [data: { status: string; description: string; percentage: number }];
+  update: [data: { status: ProgressStatus; description: string; percentage: number }];
 }>();
 
-const formData = ref({ status: 'planning', description: '', percentage: 0 });
+const formData = ref<{ status: ProgressStatus; description: string; percentage: number }>({ 
+  status: 'pending', 
+  description: '', 
+  percentage: 0 
+});
 
 watch(
   () => [formData.value.status, formData.value.description, formData.value.percentage],

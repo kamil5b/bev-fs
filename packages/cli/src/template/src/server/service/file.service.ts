@@ -1,3 +1,4 @@
+import type { FileUploadResponse, FileDeleteResponse, FileListResponse, UploadedFile } from '../shared';
 import { FileStorageGateway, defaultFileStorageGateway } from "../gateway/file.storage.gateway";
 
 /**
@@ -21,36 +22,46 @@ export class FileService {
   /**
    * Upload multiple files
    */
-  async uploadFiles(files: File[]) {
+  async uploadFiles(files: File[]): Promise<FileUploadResponse> {
     if (!Array.isArray(files) || files.length === 0) {
       throw new Error("Files array is required");
     }
 
-    const results = [];
+    const results: UploadedFile[] = [];
     for (const file of files) {
       const result = await this.uploadFile(file);
       results.push(result);
     }
 
-    return results;
+    return {
+      success: true,
+      files: results
+    };
   }
 
   /**
    * Delete a file by name
    */
-  async deleteFile(fileName: string) {
+  async deleteFile(fileName: string): Promise<FileDeleteResponse> {
     if (!fileName) {
       throw new Error("File name is required");
     }
 
-    return await this.gateway.delete(fileName);
+    await this.gateway.delete(fileName);
+    return {
+      success: true
+    };
   }
 
   /**
    * List all files
    */
-  async listFiles() {
-    return await this.gateway.list();
+  async listFiles(): Promise<FileListResponse> {
+    const files: UploadedFile[] = await this.gateway.list();
+    return {
+      success: true,
+      files: files
+    };
   }
 
   /**

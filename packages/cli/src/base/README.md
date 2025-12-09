@@ -1,16 +1,23 @@
-# Bun Elysia Vue Full-Stack Base Edition
+# Bun Elysia Vue Full-Stack — Base Edition
 
 A minimal, framework-driven full-stack starter template using **Bun**, **Elysia**, **Vue 3**, and **bev-fs**.
 
-This is the **base edition** — a lightweight starting point that leverages the **bev-fs** framework for automatic routing and project structure.
+This is the **base edition** — a lightweight starting point with just the essentials that leverages the **bev-fs** framework for automatic routing and project structure.
+
+**Want more?** Check out the **full template edition** which includes:
+- Pre-built components (ProductTable, Modal, etc.)
+- Complete example app (product management with file uploads)
+- Sample pages and composables
+- Production-ready patterns
 
 ## 🚀 What's Included
 
-- **Backend**: Elysia server powered by bev-fs framework
+- **Backend**: Elysia server with bev-fs framework
 - **Frontend**: Vue 3 with automatic route discovery via bev-fs
 - **Framework**: bev-fs handles routing, file-based structure, and shared utilities
 - **Development**: Hot module replacement for fast iteration
 - **TypeScript**: Full end-to-end type safety
+- **Minimal**: No pre-built components or example code — just the framework
 
 ## 📋 Prerequisites
 
@@ -61,17 +68,16 @@ Generates:
 src/
 ├── client/              # Vue 3 frontend (auto-routed by bev-fs)
 │   ├── router/          # File-based routing (folder structure = routes)
-│   ├── components/      # Reusable components
 │   ├── App.vue          # Root component
 │   ├── main.ts          # Entry point
 │   └── index.html       # HTML template
 │
 ├── server/              # Elysia backend (auto-routed by bev-fs)
 │   ├── router/          # File-based routing (folder structure = API routes)
-│   ├── middleware.ts    # Custom middleware
+│   ├── middleware.ts    # Custom middleware (empty by default)
 │   └── index.ts         # Entry point
 │
-└── shared/              # Types and utilities
+└── shared/              # Shared types and utilities (empty by default)
     └── index.ts         # Shared exports
 ```
 
@@ -85,10 +91,11 @@ Your file structure **automatically becomes your routes**:
 ```
 src/server/router/
 ├── index.ts           → GET/POST /
-├── api/
-│   ├── index.ts       → GET/POST /api
-│   └── [id]/
-│       └── index.ts   → GET/POST /api/:id
+├── hello/
+│   └── index.ts       → GET/POST /hello
+└── api/
+    └── [id]/
+        └── index.ts   → GET/POST /api/:id
 ```
 
 **Client routes:**
@@ -184,8 +191,7 @@ Customize in `vite.config.ts`:
 
 ## 📚 Resources
 
-- [bev-fs Framework Guide](../../../framework/FRAMEWORK.md) — Core framework API and utilities
-- [bev-fs Documentation](../../../docs/GUIDE.md)
+- [bev-fs Framework Guide](./GUIDE.md) — Core framework API and utilities
 - [Bun Documentation](https://bun.sh/docs)
 - [Elysia Documentation](https://elysiajs.com)
 - [Vue 3 Documentation](https://vuejs.org)
@@ -193,10 +199,21 @@ Customize in `vite.config.ts`:
 
 ## 🎯 Next Steps
 
-1. **Explore the framework**: Check out bev-fs utilities in `node_modules/bev-fs`
-2. **Add your first route**: Create a `src/server/router/hello/index.ts`
+1. **Understand the framework**: Read [GUIDE.md](./GUIDE.md) for detailed API documentation
+2. **Add your first route**: Create `src/server/router/hello/index.ts`
 3. **Build a page**: Create `src/client/router/hello/index.vue`
-4. **Deploy**: Use `bun run build` and deploy the `dist/` folder
+4. **Scale up**: Need more features? Refer to the full template edition for examples
+5. **Deploy**: Use `bun run build` and deploy the `dist/` folder
+
+## 💡 Tips
+
+- Keep your file structure flat initially, then organize as your app grows
+- Use TypeScript for better IDE support and type safety
+- Check the full template edition in the repository for examples of:
+  - Component patterns
+  - Composable organization
+  - Service/repository patterns
+  - Complete CRUD operations
 
 ## 📄 License
 

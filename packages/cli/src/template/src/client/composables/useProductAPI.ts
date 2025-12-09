@@ -3,40 +3,34 @@
  * Provides reactive API client for product endpoints
  */
 
-import type { ProductRequest, ProductResponse, ProgressRequest, ProgressResponse } from '../../shared';
+import type { ProductRequest, ProductResponse, ProgressRequest, ProgressResponse, ErrorResponse } from '../../shared';
 
 const BASE_URL = '/api';
 
-/**
- * Helper to handle API errors consistently
- */
-function handleApiError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return { success: false, message: 'API request failed', error: message };
-}
-
 export function useProductAPI() {
-  const list = async (): Promise<ProductResponse.GetList | ReturnType<typeof handleApiError>> => {
+  const list = async (): Promise<ProductResponse.GetList | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
-  const get = async (id: number): Promise<ProductResponse.GetById | ReturnType<typeof handleApiError>> => {
+  const get = async (id: number): Promise<ProductResponse.GetById | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
-  const create = async (data: ProductRequest.Create): Promise<ProductResponse.Create | ReturnType<typeof handleApiError>> => {
+  const create = async (data: ProductRequest.Create): Promise<ProductResponse.Create | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product`, {
         method: 'POST',
@@ -46,11 +40,12 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
-  const update = async (id: number, data: ProductRequest.Update): Promise<ProductResponse.Update | ReturnType<typeof handleApiError>> => {
+  const update = async (id: number, data: ProductRequest.Update): Promise<ProductResponse.Update | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${id}`, {
         method: 'PATCH',
@@ -60,11 +55,12 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
-  const remove = async (id: number): Promise<ProductResponse.Delete | ReturnType<typeof handleApiError>> => {
+  const remove = async (id: number): Promise<ProductResponse.Delete | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${id}`, {
         method: 'DELETE'
@@ -72,24 +68,26 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
-  const listProgress = async (productId: number): Promise<ProgressResponse.GetList | ReturnType<typeof handleApiError>> => {
+  const listProgress = async (productId: number): Promise<ProgressResponse.GetList | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${productId}/progress`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
   const createProgress = async (
     productId: number,
-    data: any
-  ): Promise<any> => {
+    data: ProgressRequest.Create
+  ): Promise<ProgressResponse.Create | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${productId}/progress`, {
         method: 'POST',
@@ -99,15 +97,16 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
   const updateProgress = async (
     productId: number,
     progressId: number,
-    data: any
-  ): Promise<any> => {
+    data: ProgressRequest.Update
+  ): Promise<ProgressResponse.Update | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${productId}/progress/${progressId}`, {
         method: 'PATCH',
@@ -117,14 +116,15 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 
   const deleteProgress = async (
     productId: number,
     progressId: number
-  ): Promise<any> => {
+  ): Promise<ProgressResponse.Delete | ErrorResponse> => {
     try {
       const res = await fetch(`${BASE_URL}/product/${productId}/progress/${progressId}`, {
         method: 'DELETE'
@@ -132,7 +132,8 @@ export function useProductAPI() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     } catch (error) {
-      return handleApiError(error);
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
     }
   };
 

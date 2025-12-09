@@ -207,13 +207,6 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
     version: process.env.npm_package_version || "1.0.0",
   }));
 
-  // Static asset serving
-  if (fs.existsSync(staticDir)) {
-    app.use(staticPlugin({ assets: staticDir, prefix: "/" }));
-  } else if (isDev) {
-    console.warn(`Static directory not found: ${staticDir}`);
-  }
-
   // Auto-register API handlers: directory-based routing
   // Routes are defined by directory structure, handler must be in index.ts
   // Example: src/server/router/product/[id]/progress/index.ts -> /api/product/:id/progress
@@ -406,19 +399,47 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
     console.warn(`Router directory not found: ${routerDir}`);
   }
 
+  // Static file serving (must come before SPA catch-all route)
+  if (fs.existsSync(staticDir)) {
+    // Serve assets with a specific route
+    app.get("/assets/*", (c) => {
+      const pathname = new URL(c.request.url).pathname;
+      const filePath = path.join(staticDir, pathname);
+      
+      // Security: ensure the file is within staticDir
+      const resolvedPath = path.resolve(filePath);
+      const resolvedDir = path.resolve(staticDir);
+      if (!resolvedPath.startsWith(resolvedDir)) {
+        c.set.status = 404;
+        return { error: "Not Found" };
+      }
+      
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        return Bun.file(filePath);
+      }
+      
+      c.set.status = 404;
+      return { error: "Not Found" };
+    });
+  }
+
   // SPA fallback for client-side routing
   // Only serve index.html for non-API paths
   app.get("*", (c) => {
     const pathname = new URL(c.request.url).pathname;
     
-    // Don't serve index.html for API routes
-    if (pathname.startsWith("/api/")) {
+    // Don't serve index.html for API routes or static assets
+    if (pathname.startsWith("/api/") || pathname.startsWith("/assets/")) {
       c.set.status = 404;
       return { error: "Not Found" };
     }
     
     const index = path.join(staticDir, "index.html");
-    if (fs.existsSync(index)) return Bun.file(index);
+    if (fs.existsSync(index)) {
+      const content = fs.readFileSync(index, 'utf-8');
+      c.set.headers["Content-Type"] = "text/html; charset=utf-8";
+      return content;
+    }
     return { message: "Server running" };
   });
 

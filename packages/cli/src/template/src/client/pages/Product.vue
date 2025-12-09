@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useAppRouter, useAppRoute } from '../composables/useAppRouter';
 import { useProductAPI } from '../composables/useProductAPI';
 import { Product } from '../../shared';
 import PageHeader from '../components/PageHeader.vue';
@@ -39,8 +39,8 @@ import ProductDetail from '../components/ProductDetail.vue';
 import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 
-const router = useRouter();
-const route = useRoute();
+const router = useAppRouter();
+const route = useAppRoute();
 const { get, update, remove } = useProductAPI();
 const product = ref<Product | null>(null);
 const editing = ref(false);

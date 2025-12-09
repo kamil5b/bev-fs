@@ -53,7 +53,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useAppRouter } from 'bev-fs';
 import { useProductAPI } from '../composables/useProductAPI';
 import { Product } from '../../shared';
 import ProductForm from '../components/ProductForm.vue';
@@ -62,7 +62,7 @@ import Modal from '../components/Modal.vue';
 import LoadingSpinner from '../components/LoadingSpinner.vue';
 import FileUpload from '../components/FileUpload.vue';
 
-const router = useRouter();
+const router = useAppRouter();
 const { list, create, remove, update } = useProductAPI();
 const products = ref<Product[]>([]);
 const loading = ref(false);
@@ -77,7 +77,13 @@ async function loadProducts() {
   loading.value = true;
   try {
     const data = await list();
-    products.value = data.products;
+    // Check if response is an error
+    if ('error' in data) {
+      console.error('Failed to load products:', data.message);
+      products.value = [];
+      return;
+    }
+    products.value = data.products || [];
   } finally {
     loading.value = false;
   }
@@ -89,9 +95,20 @@ async function addProduct() {
     return;
   }
 
-  const response = await create(newProduct.value);
-  products.value.push(response.created);
-  newProduct.value = { name: '', price: 0 };
+  try {
+    const response = await create(newProduct.value);
+    
+    // Check if response is an error
+    if ('error' in response) {
+      console.error('Failed to add product:', response);
+      return;
+    }
+    
+    products.value.push(response.created);
+    newProduct.value = { name: '', price: 0 };
+  } catch (error) {
+    console.error('Failed to add product:', error);
+  }
 }
 
 async function deleteProduct(id: number) {
@@ -100,7 +117,7 @@ async function deleteProduct(id: number) {
   }
 
   await remove(id);
-  products.value = products.value.filter(p => p.id !== id);
+  products.value = products.value.filter((p: any) => p.id !== id);
 }
 
 function viewProgress(productId: number) {
@@ -110,17 +127,27 @@ function viewProgress(productId: number) {
 async function saveEdit() {
   if (!editingProduct.value) return;
   
-  const updated = await update(editingProduct.value.id, {
-    name: editingProduct.value.name,
-    price: editingProduct.value.price,
-  });
-  
-  const index = products.value.findIndex(p => p.id === editingProduct.value!.id);
-  if (index !== -1) {
-    products.value[index] = updated.updated;
+  try {
+    const updated = await update(editingProduct.value.id, {
+      name: editingProduct.value.name,
+      price: editingProduct.value.price,
+    });
+    
+    // Check if response is an error
+    if ('error' in updated) {
+      console.error('Failed to update product:', updated);
+      return;
+    }
+    
+    const index = products.value.findIndex((p: any) => p.id === editingProduct.value!.id);
+    if (index !== -1) {
+      products.value[index] = updated.updated;
+    }
+    
+    editingProduct.value = null;
+  } catch (error) {
+    console.error('Failed to update product:', error);
   }
-  
-  editingProduct.value = null;
 }
 </script>
 

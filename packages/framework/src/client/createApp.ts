@@ -18,7 +18,11 @@ export function createFrameworkApp(rootComponent: any, opts: ClientOptions = {})
     routes
   });
 
+  // Install router with explicit type
   app.use(router);
+  
+  // ALSO add router as global property as a workaround
+  app.config.globalProperties.$router = router;
 
   return { app, router };
 }
@@ -27,7 +31,6 @@ function discoverRoutes(modules: Record<string, any>): any[] {
   const routes: any[] = [];
   let notFoundComponent: any = null;
   const routePaths = new Set<string>();
-  const conflictingPaths: { path: string; route: string }[] = [];
 
   // Only process index.vue files from router directories
   const validModules = Object.entries(modules).filter(([path]) => 
@@ -48,7 +51,6 @@ function discoverRoutes(modules: Record<string, any>): any[] {
 
     // Check for conflicting routes
     if (routePaths.has(routePath)) {
-      conflictingPaths.push({ path: filePath, route: routePath });
       console.warn(`⚠️  Duplicate route detected: ${routePath} from ${filePath}`);
     }
 

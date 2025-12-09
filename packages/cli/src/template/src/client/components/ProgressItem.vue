@@ -60,7 +60,7 @@ defineEmits<{
   text-transform: uppercase;
 }
 
-.status.planning {
+.status.pending {
   background: #e3f2fd;
   color: #1976d2;
 }
@@ -73,6 +73,11 @@ defineEmits<{
 .status.completed {
   background: #e8f5e9;
   color: #388e3c;
+}
+
+.status.failed {
+  background: #ffebee;
+  color: #d32f2f;
 }
 
 .date {

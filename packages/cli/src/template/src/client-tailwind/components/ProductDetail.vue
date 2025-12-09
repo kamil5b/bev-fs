@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { Product } from '../../../../base/src/shared';
+import { Product } from '../../shared';
 
 defineProps<{
   product: Product;

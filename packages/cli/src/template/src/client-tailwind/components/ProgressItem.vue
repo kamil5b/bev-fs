@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { Progress } from '../../../../base/src/shared';
+import { Progress } from '../../shared';
 
 defineProps<{
   progress: Progress;

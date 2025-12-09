@@ -1,10 +1,5 @@
 import { ref } from 'vue';
-
-export interface UploadedFile {
-  fileName: string;
-  url: string;
-  size: number;
-}
+import type { UploadedFile } from '@/shared';
 
 export function useFileUpload() {
   const loading = ref(false);

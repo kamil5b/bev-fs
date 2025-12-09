@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia';
+import type { FileListResponse } from '../../shared';
 import { handleListFiles, handleUploadFiles } from "../../handler/file.handler";
 
 /**
@@ -21,7 +22,7 @@ export const middleware = [
  * Example with curl:
  * curl http://localhost:3000/api/file
  */
-export const GET = async () => {
+export const GET = async (): Promise<FileListResponse> => {
   return await handleListFiles();
 };
 
@@ -31,7 +32,7 @@ export const GET = async () => {
  * Example with curl:
  * curl -F "file=@document.pdf" http://localhost:3000/api/file
  */
-export const POST = async ({ body, set }: any) => {
+export const POST = async ({ body, set }: { body: Record<string, any>; set: Record<string, any> }) => {
   const files: File[] = [];
 
   if (!body || typeof body !== "object") {

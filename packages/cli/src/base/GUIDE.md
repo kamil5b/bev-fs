@@ -2,6 +2,8 @@
 
 Welcome to the **bev-fs framework** documentation! This guide explains the core building blocks that power the full-stack system — everything you need to build modern, type-safe fullstack applications with Vue 3 and Bun.
 
+**Note:** This is the base edition guide. For more advanced patterns and examples, see the full template edition documentation.
+
 ## What is bev-fs?
 
 **bev-fs** (Bun Elysia Vue Fullstack) is a minimal, opinionated fullstack framework that provides:
@@ -211,6 +213,37 @@ export const POST = async ({ body }) => {
 
 ---
 
+### 2.5. `useAppRouter()` and `useAppRoute()` — Client-side routing composables
+
+Vue composables to access the router and current route in your components. These work around Vue Router's plugin injection issues and provide a clean API.
+
+```typescript
+import { useAppRouter, useAppRoute } from "bev-fs";
+
+export default {
+  setup() {
+    const router = useAppRouter();
+    const route = useAppRoute();
+
+    const navigateToProduct = (id: string) => {
+      router?.push(`/product/${id}`);
+    };
+
+    const productId = route?.params?.id;
+
+    return { navigateToProduct, productId };
+  }
+};
+```
+
+**Returns:**
+- `useAppRouter()` — Vue Router instance with `push()`, `replace()`, etc.
+- `useAppRoute()` — Current route object with `params`, `query`, `path`, etc.
+
+**Why custom composables?** Vue Router's `useRouter()` and `useRoute()` composables don't work reliably with the framework's app initialization. These custom composables provide the same functionality with proper global property fallback.
+
+---
+
 ### 3. `createRoute()` — Type-safe route definitions
 
 Helper function to create a type-safe route definition with API integration:
@@ -332,9 +365,11 @@ This allows developers to override config locally without affecting the reposito
 
 ## Advanced Patterns
 
-### Clean Architecture with bev-fs
+### Starting Simple and Scaling
 
-The framework is designed to work seamlessly with clean architecture:
+The base edition is intentionally minimal. As your project grows, follow these patterns:
+
+#### Clean Architecture Layers
 
 ```
 HTTP Request
@@ -350,142 +385,175 @@ Repository (data access abstraction)
 Store/Database
 ```
 
-**Example with clean architecture:**
+**Start with:**
+```typescript
+// src/server/router/hello/index.ts
+export const GET = () => {
+  return { message: "Hello, World!" };
+};
+```
 
+**Scale to:**
 ```typescript
 // src/server/router/product/[id]/index.ts
 import { ProductService } from "../../service/product.service";
 
 export const GET = async ({ params }) => {
-  // Handler: minimal logic, just delegate
   return ProductService.getById(params.id);
 };
-
-export const PATCH = async ({ params, body }) => {
-  // Handler: parse, validate, delegate
-  return ProductService.update(params.id, body);
-};
-
-export const DELETE = async ({ params }) => {
-  // Handler: delegate
-  return ProductService.delete(params.id);
-};
 ```
 
-```typescript
-// src/server/service/product.service.ts
-import { ProductRepository } from "../repository/product.repository";
+#### Type-Safe API Integration
 
-export const ProductService = {
-  async getById(id: string) {
-    // Service: business logic, transform data
-    const product = await ProductRepository.findById(id);
-    return {
-      ...product,
-      formattedDate: new Date(product.createdAt).toISOString()
-    };
-  },
-
-  async update(id: string, data: any) {
-    // Service: validation, business logic
-    if (!data.name) throw new Error("Name is required");
-    return ProductRepository.update(id, data);
-  },
-
-  async delete(id: string) {
-    // Service: cascading operations, cleanup
-    await ProductRepository.delete(id);
-    return { deleted: true };
-  }
-};
-```
-
-### Type-Safe API Calls
-
-Use the shared types between client and server:
+Define shared types for client-server communication:
 
 ```typescript
-// src/shared/responses/product.response.ts
-export interface ProductResponse {
-  id: string;
+// src/shared/index.ts
+export interface Product {
+  id: number;
   name: string;
   price: number;
+}
+
+export interface ErrorResponse {
+  success: false;
+  message: string;
 }
 ```
 
 ```typescript
-// src/client/composables/useProductAPI.ts
-import type { ProductResponse } from "@/shared/responses/product.response";
+// src/client/composables/useAPI.ts
+import type { Product, ErrorResponse } from "@/shared";
 
 export function useProductAPI() {
-  const getProduct = async (id: string): Promise<ProductResponse> => {
-    const res = await fetch(`/api/product/${id}`);
-    return res.json();
+  const getProduct = async (id: number): Promise<Product | ErrorResponse> => {
+    try {
+      const res = await fetch(`/api/product/${id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, message };
+    }
   };
 
   return { getProduct };
 }
 ```
 
+### Adding Custom Middleware
+
+Extend functionality with middleware:
+
+```typescript
+// src/server/middleware.ts
+export function createAuthMiddleware() {
+  return (app) => {
+    return app.derive(({ headers }) => {
+      const token = headers["authorization"]?.split(" ")[1];
+      if (!token) throw new Error("Unauthorized");
+      return { userId: decodeToken(token) };
+    });
+  };
+}
+```
+
+```typescript
+// src/server/router/protected/index.ts
+import { createAuthMiddleware } from "../../middleware";
+
+export const middleware = createAuthMiddleware();
+
+export const GET = ({ userId }) => {
+  return { message: `Hello, user ${userId}` };
+};
+```
+
+### When to Add Complexity
+
+Add these as your app grows:
+
+- **Composables** (`src/client/composables/`) — When you have shared component logic
+- **Services** (`src/server/service/`) — When router handlers become complex
+- **Repositories** (`src/server/repository/`) — When you have multiple data sources
+- **Components** (`src/client/components/`) — When you have reusable UI patterns
+- **Configuration files** (`config.yaml`, `.env`) — When you need environment-specific settings
+
 ---
 
 ## Best Practices
 
-### 1. Directory Structure
+### 1. Start Minimal
 
-Keep your code organized:
+The base edition provides just the framework foundation. Add complexity only when needed:
 
+**Do:**
+- Start with simple routes in `src/server/router/`
+- Keep logic inline until it becomes reusable
+- Define types in `src/shared/` early
+
+**Don't:**
+- Create unnecessary folder structures
+- Add layers (services, repositories) before they're needed
+- Over-engineer the initial architecture
+
+### 2. Directory Structure Evolution
+
+**Phase 1 (Start here):**
 ```
 src/
-├── client/              # Vue frontend
-│   ├── components/
-│   ├── composables/
-│   ├── pages/
-│   ├── router/
-│   ├── App.vue
-│   └── main.ts
-├── server/              # Bun + Elysia API
-│   ├── handler/
-│   ├── service/
-│   ├── repository/
-│   ├── router/
-│   ├── middleware.ts
-│   └── index.ts
-└── shared/              # Shared types & utilities
-    ├── entities/
-    ├── requests/
-    ├── responses/
-    └── index.ts
+├── client/router/      # Your pages
+├── server/router/      # Your API endpoints
+└── shared/             # Shared types
 ```
 
-### 2. Naming Conventions
+**Phase 2 (When logic grows):**
+```
+src/
+├── client/
+│   ├── router/
+│   ├── composables/    # Add for reusable logic
+│   └── components/     # Add for reusable UI
+├── server/
+│   ├── router/
+│   ├── service/        # Add when handlers get complex
+│   └── repository/     # Add when data access is reused
+└── shared/
+```
 
-- **Components**: `PascalCase.vue` (e.g., `ProductForm.vue`)
+### 3. Naming Conventions
+
+Keep it simple:
 - **Pages**: `PascalCase.vue` (e.g., `Product.vue`)
 - **Composables**: `useCamelCase.ts` (e.g., `useProductAPI.ts`)
-- **Services**: `service.ts` suffix (e.g., `product.service.ts`)
-- **Repositories**: `repository.ts` suffix (e.g., `product.repository.ts`)
-
-### 3. Router Organization
-
-- Keep router structure **flat** for simple routes
-- Use **`[paramName]` directories** for dynamic segments
-- Create `not-found/index.vue` for 404 pages
-- One route per directory (avoid sibling page files)
+- **Services**: `camelCase.service.ts` (e.g., `product.service.ts`)
+- **Repositories**: `camelCase.repository.ts` (e.g., `product.repository.ts`)
 
 ### 4. API Design
 
-- Keep API routes **RESTful** when possible
-- Use appropriate HTTP methods: GET, POST, PUT, PATCH, DELETE
-- Return **consistent response formats**
-- Handle errors with proper HTTP status codes
+- Keep routes **RESTful**: `GET`, `POST`, `PATCH`, `DELETE`
+- Use **consistent response formats**
+- Return proper **HTTP status codes**
+- Define types in `src/shared/` for client-server contracts
 
-### 5. Code Reuse
+### 5. Type Safety First
 
-- Use **composables** on client for API calls and logic
-- Use **services** on server for business logic
-- Use **repositories** for data access abstraction
-- Use **shared types** for client-server communication
+Always define types early:
+
+```typescript
+// src/shared/index.ts
+export interface Product {
+  id: number;
+  name: string;
+}
+
+export interface ErrorResponse {
+  success: false;
+  message: string;
+}
+```
+
+Use these types in both client and server to catch mismatches at build time.
 
 ---
 
