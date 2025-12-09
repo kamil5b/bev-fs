@@ -9,11 +9,12 @@ bev-fs is a fullstack TypeScript framework that combines Vue 3 (frontend) and El
 **Package Structure:**
 * `packages/framework` (`bev-fs`) — Core runtime library
 * `packages/cli` (`create-bev-fs`) — Project scaffolding CLI
-* `packages/cli/src/template` — Starter template with examples
+* `packages/cli/src/template` — Feature-rich starter template with examples
+* `packages/cli/src/base` — Minimal base template for lightweight projects
 
 **Current Versions:**
-- `bev-fs@0.3.3` — Framework runtime
-- `create-bev-fs@0.4.4` — CLI tool
+- `bev-fs@1.0.0` — Framework runtime
+- `create-bev-fs@1.0.0` — CLI tool
 
 ---
 
@@ -33,12 +34,13 @@ bun-fullstack/                    # Monorepo root
 │   │   │   │   └── types.ts           # Shared type definitions
 │   │   │   └── index.ts               # Main exports
 │   │   ├── dist/                      # Compiled output (ES modules)
-│   │   └── package.json               # v0.3.3
+│   │   └── package.json               # v1.0.0
 │   │
 │   └── cli/                      # create-bev-fs scaffolding tool
 │       ├── src/
 │       │   ├── index.ts               # CLI entry point
-│       │   └── template/              # Starter project template
+│       │   ├── base/                  # Minimal starter template
+│       │   └── template/              # Feature-rich starter template
 │       │       ├── src/
 │       │       │   ├── client/        # Vue frontend example
 │       │       │   ├── server/        # Elysia backend example
@@ -70,12 +72,18 @@ bun-fullstack/                    # Monorepo root
 - Type utilities
 
 **CLI package (`create-bev-fs`):**
-- Project scaffolding command
+- Project scaffolding command with template selection (base or template edition)
 - Template copying with file renaming
 - Git repository initialization
 - Dependency resolution
 
-**Template:**
+**Base Edition (Minimal Starter):**
+- Lightweight project foundation
+- Essential folder structure
+- Simple route examples
+- Guides for scaling incrementally
+
+**Template Edition (Feature-Rich Starter):**
 - Complete starter project
 - Example routes (client and server)
 - Type-safe API client
@@ -260,12 +268,18 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
   ],
   "scripts": {
     "bootstrap": "bun install",
-    "build:framework": "cd packages/framework && bun run build",
-    "build:cli": "cd packages/cli && bun run build",
-    "build": "bun run build:framework && bun run build:cli"
+    "publish": "./scripts/publish.sh",
+    "dev": "./scripts/testbed-dev.sh",
+    "start": "./scripts/testbed-prod.sh"
   }
 }
 ```
+
+**Key scripts:**
+- `bootstrap` — Install all workspace dependencies
+- `dev` — Build packages and run testbed in development mode
+- `start` — Build packages and run testbed in production mode
+- `publish` — Build and publish both packages to npm
 
 ---
 
@@ -276,7 +290,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```json
 {
   "name": "bev-fs",
-  "version": "0.3.3",
+  "version": "1.0.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -311,14 +325,14 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```json
 {
   "name": "create-bev-fs",
-  "version": "0.4.4",
+  "version": "1.0.0",
   "type": "module",
   "bin": {
     "create-bev-fs": "wrapper.js"
   },
   "files": ["dist", "wrapper.js"],
   "scripts": {
-    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/template dist/"
+    "build": "tsc src/index.ts --outDir dist --skipLibCheck --esModuleInterop --declaration --declarationMap --moduleResolution node --module ESNext && cp -r src/base src/template dist/"
   },
   "dependencies": {
     "fs-extra": "*",
@@ -584,16 +598,18 @@ cd packages/cli && bun run build && cd ../..
 
 **6. Publish updates:**
 ```bash
-# Update version in package.json files
+# Update versions in both package.json files:
+# - packages/framework/package.json
+# - packages/cli/package.json
 
-# Publish framework
-cd packages/framework
-npm publish
-
-# Publish CLI (includes template)
-cd ../cli
-npm publish
+# Then use the workspace publish script:
+bun run publish
 ```
+
+This automatically:
+1. Builds the framework package
+2. Builds the CLI package (including bundled template)
+3. Publishes both to npm
 
 ---
 

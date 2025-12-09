@@ -3,8 +3,8 @@
 A modern, type-safe fullstack framework for building Vue 3 + Elysia applications with zero configuration. Features automatic route discovery, single-port deployment, and end-to-end TypeScript support.
 
 **Published packages:**
-- [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v0.3.3+)
-- [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v0.4.4+)
+- [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v1.0.0+)
+- [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v1.0.0+)
 
 ## Key Features
 
@@ -87,25 +87,41 @@ export const GET = () => {
 
 ✅ API automatically available at `GET /api/users`
 
-## Publishing Updates (Maintainers)
+## Repository Scripts
 
-### Update Framework
+The root `package.json` provides convenient scripts for development and publishing:
+
+| Script | Description |
+|--------|-------------|
+| `bun run bootstrap` | Install all dependencies in workspace |
+| `bun run dev` | Build packages and start testbed with dev servers |
+| `bun run start` | Build packages and start testbed with production server |
+| `bun run publish` | Build both packages and publish to npm |
+
+### Quick Development
 
 ```bash
-cd packages/framework
-# Update version in package.json
-bun run build
-npm publish
+# Install dependencies
+bun run bootstrap
+
+# Build everything and start dev servers
+bun run dev
+# Now: Vite on http://localhost:5173, Elysia on http://localhost:3000
 ```
 
-### Update CLI
+### Publishing Updates (Maintainers)
+
+Update versions in both `packages/framework/package.json` and `packages/cli/package.json`, then:
 
 ```bash
-cd packages/cli
-# Update version in package.json
-bun run build
-npm publish
+# Build and publish both packages to npm
+bun run publish
 ```
+
+This runs the `publish.sh` script which:
+1. Builds the framework package
+2. Builds the CLI package
+3. Publishes both to npm
 
 ## How It Works
 
