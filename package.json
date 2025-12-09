@@ -8,6 +8,7 @@
   "scripts": {
     "bootstrap": "bun install",
     "publish": "./scripts/publish.sh",
-    "dev": "./scripts/testbed.sh"
+    "dev": "./scripts/testbed-dev.sh",
+    "start": "./scripts/testbed-prod.sh"
   }
 }
