@@ -34,7 +34,7 @@ cd /tmp/bun-testbed
 echo ""
 echo "=== Setting up framework dependency ==="
 echo "Using framework from: $FRAMEWORK_PATH"
-sed -i "s|\"bev-fs\": \"[^\"]*\"|\"bev-fs\": \"file:$FRAMEWORK_PATH\"|" package.json
+sed -i '' "s|\"bev-fs\": \"[^\"]*\"|\"bev-fs\": \"file:$FRAMEWORK_PATH\"|" package.json
 
 echo ""
 echo "=== Installing dependencies ==="
