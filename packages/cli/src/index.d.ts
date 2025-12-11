@@ -1,3 +1,3 @@
 #!/usr/bin/env bun
-export {};
+export {}
 //# sourceMappingURL=index.d.ts.map

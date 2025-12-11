@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia } from 'elysia'
 
 /**
  * Logging middleware for request/response logging
@@ -6,11 +6,11 @@ import { Elysia } from "elysia";
 export function loggingMiddleware() {
   return (app: Elysia) => {
     return app.onBeforeHandle(({ request }) => {
-      const { method, url } = request;
-      const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] ${method} ${url}`);
-    });
-  };
+      const { method, url } = request
+      const timestamp = new Date().toISOString()
+      console.log(`[${timestamp}] ${method} ${url}`)
+    })
+  }
 }
 
 /**
@@ -19,14 +19,14 @@ export function loggingMiddleware() {
 export function requestTimingMiddleware() {
   return (app: Elysia) => {
     return app
-      .derive({ as: "scoped" }, ({ request }) => {
-        const startTime = Date.now();
-        return { startTime };
+      .derive({ as: 'scoped' }, ({ request }) => {
+        const startTime = Date.now()
+        return { startTime }
       })
-      .onAfterHandle({ as: "scoped" }, ({ request, startTime }) => {
-        const duration = Date.now() - startTime;
-        const { method, url } = request;
-        console.log(`${method} ${url} - ${duration}ms`);
-      });
-  };
+      .onAfterHandle({ as: 'scoped' }, ({ request, startTime }) => {
+        const duration = Date.now() - startTime
+        const { method, url } = request
+        console.log(`${method} ${url} - ${duration}ms`)
+      })
+  }
 }

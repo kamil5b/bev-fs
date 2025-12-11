@@ -6,7 +6,9 @@
         <slot />
       </div>
       <div class="modal-actions">
-        <button @click="$emit('save')" class="btn btn-primary">{{ saveLabel }}</button>
+        <button @click="$emit('save')" class="btn btn-primary">
+          {{ saveLabel }}
+        </button>
         <button @click="$emit('close')" class="btn">Cancel</button>
       </div>
     </div>
@@ -14,19 +16,22 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
-  isOpen: boolean;
-  title?: string;
-  saveLabel?: string;
-}>(), {
-  title: 'Modal',
-  saveLabel: 'Save'
-});
+withDefaults(
+  defineProps<{
+    isOpen: boolean
+    title?: string
+    saveLabel?: string
+  }>(),
+  {
+    title: 'Modal',
+    saveLabel: 'Save',
+  },
+)
 
 defineEmits<{
-  close: [];
-  save: [];
-}>();
+  close: []
+  save: []
+}>()
 </script>
 
 <style scoped>

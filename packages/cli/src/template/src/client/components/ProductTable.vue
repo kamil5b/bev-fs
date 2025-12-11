@@ -14,9 +14,21 @@
         <td>{{ product.name }}</td>
         <td>${{ product.price.toFixed(2) }}</td>
         <td class="actions">
-          <router-link :to="`/product/${product.id}`" class="btn btn-sm">View</router-link>
-          <button @click="$emit('progress', product.id)" class="btn btn-sm btn-info">Progress</button>
-          <button @click="$emit('delete', product.id)" class="btn btn-sm btn-danger">Delete</button>
+          <router-link :to="`/product/${product.id}`" class="btn btn-sm"
+            >View</router-link
+          >
+          <button
+            @click="$emit('progress', product.id)"
+            class="btn btn-sm btn-info"
+          >
+            Progress
+          </button>
+          <button
+            @click="$emit('delete', product.id)"
+            class="btn btn-sm btn-danger"
+          >
+            Delete
+          </button>
         </td>
       </tr>
     </tbody>
@@ -24,16 +36,16 @@
 </template>
 
 <script setup lang="ts">
-import { Product } from '../../shared';
+import { Product } from '../../shared'
 
 defineProps<{
-  products: Product[];
-}>();
+  products: Product[]
+}>()
 
 defineEmits<{
-  progress: [id: number];
-  delete: [id: number];
-}>();
+  progress: [id: number]
+  delete: [id: number]
+}>()
 </script>
 
 <style scoped>

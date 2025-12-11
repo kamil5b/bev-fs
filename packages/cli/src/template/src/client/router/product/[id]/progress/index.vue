@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ProductProgress from '../../../../pages/ProductProgress.vue';
+import ProductProgress from '../../../../pages/ProductProgress.vue'
 </script>
 
 <template>

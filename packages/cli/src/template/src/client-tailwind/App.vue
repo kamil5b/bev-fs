@@ -1,9 +1,12 @@
 <template>
-  <div id="app" class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+  <div
+    id="app"
+    class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+  >
     <router-view></router-view>
   </div>
 </template>
 
 <script setup lang="ts">
-import './index.css';
+import './index.css'
 </script>

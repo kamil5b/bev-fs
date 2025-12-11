@@ -4,7 +4,7 @@
  */
 
 export interface ErrorResponse {
-  success: false;
-  message: string;
-  code?: string;
+  success: false
+  message: string
+  code?: string
 }

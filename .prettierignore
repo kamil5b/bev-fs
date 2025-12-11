@@ -1,0 +1,9 @@
+# Ignore compiled code
+**/dist/
+**/build/
+
+# Ignore dependency directories
+node_modules/
+
+# Ignore Bun-specific stuff
+.bun/

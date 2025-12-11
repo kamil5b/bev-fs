@@ -7,6 +7,7 @@ A minimal, opinionated full-stack framework for building modern applications wit
 **bev-fs** (Bun Elysia Vue Fullstack) provides a zero-config, directory-based routing framework that eliminates boilerplate and enables type-safe communication between frontend and backend.
 
 **Key features:**
+
 - 🎯 Automatic directory-based routing (both client & server)
 - 🔧 Type-safe API integration with shared types
 - ⚡ Minimal overhead — use only what you need
@@ -20,6 +21,7 @@ npm install bev-fs
 ```
 
 **Requirements:**
+
 - Node 18+ or Bun 1.0+
 - Vue 3
 - Elysia
@@ -34,17 +36,18 @@ The framework exports four main utilities:
 Initializes your Vue 3 app with automatic directory-based routing.
 
 ```typescript
-import { createFrameworkApp } from "bev-fs";
-import App from "./App.vue";
+import { createFrameworkApp } from 'bev-fs'
+import App from './App.vue'
 
 const { app, router } = createFrameworkApp(App, {
-  routeModules: import.meta.glob("./router/**/index.vue", { eager: true }),
-});
+  routeModules: import.meta.glob('./router/**/index.vue', { eager: true }),
+})
 
-app.mount("#app");
+app.mount('#app')
 ```
 
 **Parameters:**
+
 - `rootComponent` — Your root Vue component
 - `opts` (optional) — Configuration:
   - `routeModules` — Result of `import.meta.glob()` for auto-discovery
@@ -52,6 +55,7 @@ app.mount("#app");
   - `historyMode` — Use HTML5 history (default: `true`)
 
 **Returns:**
+
 ```typescript
 {
   app: App,              // Vue app instance
@@ -77,6 +81,7 @@ src/router/
 ```
 
 **Rules:**
+
 - Only `index.vue` files in `router/` directories are processed
 - Directory names become route segments
 - `[paramName]` brackets convert to `:paramName` parameters
@@ -107,19 +112,20 @@ const route = useRoute();
 Sets up an Elysia server with automatic API routing and configuration.
 
 ```typescript
-import { createFrameworkServer } from "bev-fs";
-import path from "path";
+import { createFrameworkServer } from 'bev-fs'
+import path from 'path'
 
 const server = await createFrameworkServer({
-  routerDir: path.join(process.cwd(), "src/server/router"),
-  staticDir: path.join(process.cwd(), "dist/client"),
+  routerDir: path.join(process.cwd(), 'src/server/router'),
+  staticDir: path.join(process.cwd(), 'dist/client'),
   port: 3000,
-});
+})
 
-await server.listen();
+await server.listen()
 ```
 
 **Parameters:**
+
 ```typescript
 {
   routerDir?: string;         // API router directory (default: src/server/router)
@@ -132,6 +138,7 @@ await server.listen();
 ```
 
 **Returns:**
+
 ```typescript
 {
   app: Elysia,               // Elysia app instance
@@ -160,27 +167,28 @@ src/server/router/
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import type { RouteModule, Context } from "bev-fs";
+import type { RouteModule, Context } from 'bev-fs'
 
 export const GET: RouteHandler = async (ctx: Context) => {
-  const productId = ctx.params.id;
+  const productId = ctx.params.id
   // Fetch and return product
-  return { id: productId, name: "Product" };
-};
+  return { id: productId, name: 'Product' }
+}
 
 export const PUT: RouteHandler = async (ctx: Context) => {
-  const data = ctx.body as { name: string };
+  const data = ctx.body as { name: string }
   // Update product
-  return { success: true };
-};
+  return { success: true }
+}
 
 export const DELETE: RouteHandler = async (ctx: Context) => {
   // Delete product
-  return { deleted: true };
-};
+  return { deleted: true }
+}
 ```
 
 **Supported HTTP methods:**
+
 - `GET`, `POST`, `PUT`, `PATCH`, `DELETE`
 - `default` — Handles all methods not explicitly defined
 
@@ -191,13 +199,13 @@ export const DELETE: RouteHandler = async (ctx: Context) => {
 Helper for type-safe route definitions and API path generation.
 
 ```typescript
-import { createRoute } from "bev-fs";
+import { createRoute } from 'bev-fs'
 
-const productRoute = createRoute("/product");
+const productRoute = createRoute('/product')
 
 // Generate API paths
-const listUrl = productRoute.api();        // /api/product
-const detailUrl = productRoute.api("/1");  // /api/product/1
+const listUrl = productRoute.api() // /api/product
+const detailUrl = productRoute.api('/1') // /api/product/1
 ```
 
 ---
@@ -207,36 +215,37 @@ const detailUrl = productRoute.api("/1");  // /api/product/1
 Pre-defined types for handlers and middleware:
 
 ```typescript
-import type { Context, RouteHandler, RouteModule, Middleware } from "bev-fs";
+import type { Context, RouteHandler, RouteModule, Middleware } from 'bev-fs'
 
 // Context passed to all handlers
 interface Context {
-  params: Record<string, string>;      // Route params :id, etc
-  body?: unknown;                      // Request body
-  query?: Record<string, string>;      // Query string params
-  headers: Record<string, string>;     // Request headers
-  request?: Request;                   // Raw Request object
-  set?: {                              // Response configuration
-    headers: Record<string, string>;
-    status?: number;
-  };
+  params: Record<string, string> // Route params :id, etc
+  body?: unknown // Request body
+  query?: Record<string, string> // Query string params
+  headers: Record<string, string> // Request headers
+  request?: Request // Raw Request object
+  set?: {
+    // Response configuration
+    headers: Record<string, string>
+    status?: number
+  }
 }
 
 // Individual route handler
-type RouteHandler = (ctx: Context) => unknown | Promise<unknown>;
+type RouteHandler = (ctx: Context) => unknown | Promise<unknown>
 
 // Module exports (one per file)
 interface RouteModule {
-  GET?: RouteHandler;
-  POST?: RouteHandler;
-  PUT?: RouteHandler;
-  PATCH?: RouteHandler;
-  DELETE?: RouteHandler;
-  middleware?: Middleware | Record<string, Middleware>;
+  GET?: RouteHandler
+  POST?: RouteHandler
+  PUT?: RouteHandler
+  PATCH?: RouteHandler
+  DELETE?: RouteHandler
+  middleware?: Middleware | Record<string, Middleware>
 }
 
 // Middleware function
-type Middleware = (app: Elysia) => Elysia | Promise<Elysia>;
+type Middleware = (app: Elysia) => Elysia | Promise<Elysia>
 ```
 
 ---
@@ -257,95 +266,95 @@ type Middleware = (app: Elysia) => Elysia | Promise<Elysia>;
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
-const route = useRoute();
-const product = ref(null);
+const route = useRoute()
+const product = ref(null)
 
 onMounted(async () => {
-  const res = await fetch(`/api/product/${route.params.id}`);
-  product.value = await res.json();
-});
+  const res = await fetch(`/api/product/${route.params.id}`)
+  product.value = await res.json()
+})
 
 const updateProduct = async () => {
   await fetch(`/api/product/${route.params.id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: "Updated" }),
-  });
-};
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Updated' }),
+  })
+}
 </script>
 ```
 
 **Backend:** `src/server/router/product/[id]/index.ts`
 
 ```typescript
-import type { Context, RouteHandler } from "bev-fs";
+import type { Context, RouteHandler } from 'bev-fs'
 
 interface Product {
-  id: string;
-  name: string;
-  description: string;
+  id: string
+  name: string
+  description: string
 }
 
 // Mock database
 const products: Record<string, Product> = {
-  "1": { id: "1", name: "Laptop", description: "High-end laptop" },
-};
+  '1': { id: '1', name: 'Laptop', description: 'High-end laptop' },
+}
 
 export const GET: RouteHandler = async (ctx: Context) => {
-  const product = products[ctx.params.id];
+  const product = products[ctx.params.id]
   if (!product) {
-    ctx.set = { status: 404 };
-    return { error: "Not found" };
+    ctx.set = { status: 404 }
+    return { error: 'Not found' }
   }
-  return product;
-};
+  return product
+}
 
 export const PUT: RouteHandler = async (ctx: Context) => {
-  const data = ctx.body as Partial<Product>;
-  const product = products[ctx.params.id];
+  const data = ctx.body as Partial<Product>
+  const product = products[ctx.params.id]
   if (!product) {
-    ctx.set = { status: 404 };
-    return { error: "Not found" };
+    ctx.set = { status: 404 }
+    return { error: 'Not found' }
   }
-  Object.assign(product, data);
-  return product;
-};
+  Object.assign(product, data)
+  return product
+}
 
 export const DELETE: RouteHandler = async (ctx: Context) => {
-  delete products[ctx.params.id];
-  return { deleted: true };
-};
+  delete products[ctx.params.id]
+  return { deleted: true }
+}
 ```
 
 ### Middleware
 
 ```typescript
 // src/server/router/product/index.ts
-import type { Middleware, RouteHandler } from "bev-fs";
+import type { Middleware, RouteHandler } from 'bev-fs'
 
 const authMiddleware: Middleware = (app) => {
   return app.derive(({ headers }) => {
-    const token = headers.authorization?.split(" ")[1];
-    if (!token) throw new Error("Unauthorized");
-    return { user: { authenticated: true } };
-  });
-};
+    const token = headers.authorization?.split(' ')[1]
+    if (!token) throw new Error('Unauthorized')
+    return { user: { authenticated: true } }
+  })
+}
 
 export const middleware = {
   GET: authMiddleware,
   POST: authMiddleware,
-};
+}
 
 export const GET: RouteHandler = async (ctx: Context) => {
-  return { products: [] };
-};
+  return { products: [] }
+}
 
 export const POST: RouteHandler = async (ctx: Context) => {
-  return { created: true };
-};
+  return { created: true }
+}
 ```
 
 ---
@@ -366,13 +375,15 @@ CLIENT_API_BASE=/api
 ### Server Configuration
 
 ```typescript
-import { loadConfigFromDotEnv } from "bev-fs";
+import { loadConfigFromDotEnv } from 'bev-fs'
 
-const config = loadConfigFromDotEnv();
+const config = loadConfigFromDotEnv()
 const server = await createFrameworkServer({
   ...config.server,
-  middleware: [/* custom middleware */],
-});
+  middleware: [
+    /* custom middleware */
+  ],
+})
 ```
 
 ---
@@ -400,21 +411,23 @@ Shared types between frontend and backend:
 ```typescript
 // src/shared/types.ts
 export interface Product {
-  id: string;
-  name: string;
-  price: number;
+  id: string
+  name: string
+  price: number
 }
 
 // Frontend
-import type { Product } from "../shared/types";
-const product: Product = await fetch("/api/product/1").then(r => r.json());
+import type { Product } from '../shared/types'
+const product: Product = await fetch('/api/product/1').then((r) => r.json())
 
 // Backend
-import type { Product } from "../shared/types";
+import type { Product } from '../shared/types'
 export const GET: RouteHandler = async (ctx) => {
-  const product: Product = { /* ... */ };
-  return product;
-};
+  const product: Product = {
+    /* ... */
+  }
+  return product
+}
 ```
 
 ---

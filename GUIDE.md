@@ -7,12 +7,14 @@ A comprehensive guide to the bev-fs framework architecture, implementation, and 
 bev-fs is a fullstack TypeScript framework that combines Vue 3 (frontend) and Elysia (backend) with automatic route discovery and type safety. Built for developer experience and production deployment.
 
 **Package Structure:**
-* `packages/framework` (`bev-fs`) — Core runtime library
-* `packages/cli` (`create-bev-fs`) — Project scaffolding CLI
-* `packages/cli/src/template` — Feature-rich starter template with examples
-* `packages/cli/src/base` — Minimal base template for lightweight projects
+
+- `packages/framework` (`bev-fs`) — Core runtime library
+- `packages/cli` (`create-bev-fs`) — Project scaffolding CLI
+- `packages/cli/src/template` — Feature-rich starter template with examples
+- `packages/cli/src/base` — Minimal base template for lightweight projects
 
 **Current Versions:**
+
 - `bev-fs@1.0.0` — Framework runtime
 - `create-bev-fs@1.0.0` — CLI tool
 
@@ -65,6 +67,7 @@ bun-fullstack/                    # Monorepo root
 ### Key Components
 
 **Framework package (`bev-fs`):**
+
 - Exported functions for server and client setup
 - Auto-discovery logic for routes
 - Configuration loading (YAML, .env)
@@ -72,18 +75,21 @@ bun-fullstack/                    # Monorepo root
 - Type utilities
 
 **CLI package (`create-bev-fs`):**
+
 - Project scaffolding command with template selection (base or template edition)
 - Template copying with file renaming
 - Git repository initialization
 - Dependency resolution
 
 **Base Edition (Minimal Starter):**
+
 - Lightweight project foundation
 - Essential folder structure
 - Simple route examples
 - Guides for scaling incrementally
 
 **Template Edition (Feature-Rich Starter):**
+
 - Complete starter project
 - Example routes (client and server)
 - Type-safe API client
@@ -99,6 +105,7 @@ bun-fullstack/                    # Monorepo root
 The `createFrameworkServer` function in `packages/framework/src/server/createServer.ts` implements automatic API route registration:
 
 **Process:**
+
 1. Read `routerDir` configuration (default: `src/server/router/`)
 2. Recursively scan directory structure
 3. Find all `index.ts` or `index.js` files
@@ -111,19 +118,20 @@ The `createFrameworkServer` function in `packages/framework/src/server/createSer
 7. Apply middleware pipeline to all routes
 
 **Route conversion algorithm:**
+
 ```typescript
 function convertPathToRoute(filePath: string): string {
   // Strip file extension and 'index' filename
   let routePath = filePath
     .replace(/\.(ts|js|vue)$/, '')
     .replace(/\/index$/, '')
-    .replace(/^\.\/router/, '');
-  
+    .replace(/^\.\/router/, '')
+
   // Convert [param] to :param
-  routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1');
-  
+  routePath = routePath.replace(/\[([^\]]+)\]/g, ':$1')
+
   // Ensure leading slash
-  return routePath || '/';
+  return routePath || '/'
 }
 ```
 
@@ -132,6 +140,7 @@ function convertPathToRoute(filePath: string): string {
 The `createFrameworkApp` function in `packages/framework/src/client/createApp.ts` implements automatic page routing:
 
 **Process:**
+
 1. Receive `routeModules` from `import.meta.glob('./router/**/*.vue')`
 2. Filter to only `index.vue` files
 3. Convert file paths to route paths using shared conversion logic
@@ -140,10 +149,11 @@ The `createFrameworkApp` function in `packages/framework/src/client/createApp.ts
 6. Return configured app with router
 
 **Vite integration:**
+
 ```typescript
 // In client main.ts
-const routeModules = import.meta.glob<any>("./router/**/*.vue", { eager: true });
-const { app } = createFrameworkApp(App, { routeModules });
+const routeModules = import.meta.glob<any>('./router/**/*.vue', { eager: true })
+const { app } = createFrameworkApp(App, { routeModules })
 ```
 
 ### Configuration Loading
@@ -151,6 +161,7 @@ const { app } = createFrameworkApp(App, { routeModules });
 The configuration system supports multiple sources with clear precedence:
 
 **Loading order:**
+
 1. Check for `config.yaml.local` (highest priority)
 2. Check for `config.local.yaml`
 3. Check for `config.yaml`
@@ -160,6 +171,7 @@ The configuration system supports multiple sources with clear precedence:
 **Format examples:**
 
 YAML:
+
 ```yaml
 server:
   port: 3000
@@ -173,6 +185,7 @@ database:
 ```
 
 .env:
+
 ```bash
 SERVER_PORT=3000
 SERVER_ROUTER_DIR=src/server/router
@@ -182,6 +195,7 @@ DATABASE_PORT=5432
 
 **Environment injection:**
 All config values are flattened and injected into `process.env`:
+
 - `server.port` → `process.env.SERVER_PORT`
 - `database.host` → `process.env.DATABASE_HOST`
 - Nested structures use underscore separators
@@ -189,23 +203,26 @@ All config values are flattened and injected into `process.env`:
 ### Middleware System
 
 Middleware functions receive the Elysia app instance and can:
+
 - Add hooks with `app.derive()`
 - Inject context properties
 - Intercept requests/responses
 - Add error handling
 
 **Example middleware:**
+
 ```typescript
 export function createLoggingMiddleware() {
   return (app: Elysia) => {
     app.derive((context) => {
-      const timestamp = new Date().toISOString();
-      const method = context.request?.method || 'UNKNOWN';
-      const pathname = new URL(context.request?.url || '', 'http://localhost').pathname;
-      console.log(`[INFO] ${timestamp} - ${method} ${pathname} - ENTER`);
-      return {}; // Can return additional context properties
-    });
-  };
+      const timestamp = new Date().toISOString()
+      const method = context.request?.method || 'UNKNOWN'
+      const pathname = new URL(context.request?.url || '', 'http://localhost')
+        .pathname
+      console.log(`[INFO] ${timestamp} - ${method} ${pathname} - ENTER`)
+      return {} // Can return additional context properties
+    })
+  }
 }
 ```
 
@@ -216,34 +233,36 @@ The `src/shared/api.ts` file contains types used by both client and server:
 ```typescript
 // Type definition
 export interface Product {
-  id: number;
-  name: string;
-  price: number;
+  id: number
+  name: string
+  price: number
 }
 
 // Namespace for request/response types
 export namespace ProductAPI {
   export interface CreateRequest {
-    name: string;
-    price: number;
+    name: string
+    price: number
   }
   export interface CreateResponse {
-    created: Product;
+    created: Product
   }
 }
 ```
 
 **Server usage:**
+
 ```typescript
-import type { ProductAPI } from '../../../shared/api';
+import type { ProductAPI } from '../../../shared/api'
 
 export const POST = ({ body }: any): ProductAPI.CreateResponse => {
-  const req = body as ProductAPI.CreateRequest;
+  const req = body as ProductAPI.CreateRequest
   // Implementation
-};
+}
 ```
 
 **Client usage:**
+
 ```typescript
 import type { ProductAPI } from '../shared/api';
 
@@ -263,9 +282,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
   "name": "bev-fs-monorepo",
   "private": true,
   "version": "1.0.0",
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "bootstrap": "bun install",
     "publish": "./scripts/publish.sh",
@@ -276,6 +293,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```
 
 **Key scripts:**
+
 - `bootstrap` — Install all workspace dependencies
 - `dev` — Build packages and run testbed in development mode
 - `start` — Build packages and run testbed in production mode
@@ -313,6 +331,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```
 
 **Key points:**
+
 - ES module format (`"type": "module"`)
 - Only `dist/` directory published to npm
 - Peer dependencies on framework packages (Vue, Elysia)
@@ -347,6 +366,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```
 
 **Key points:**
+
 - Binary entry point via `wrapper.js` for Node.js compatibility
 - Template directory copied during build
 - Includes file copying utilities (fs-extra)
@@ -386,6 +406,7 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```
 
 **Included examples:**
+
 - Product CRUD with nested progress tracking
 - Type-safe API client
 - Logging middleware
@@ -415,23 +436,28 @@ async create(data: ProductAPI.CreateRequest): Promise<ProductAPI.CreateResponse>
 ```
 
 **Development mode:**
+
 ```bash
 bun run dev
 ```
+
 - Vite dev server on port 5173 (HMR, fast refresh)
 - Elysia API server on port 3000
 - API calls proxied from Vite to Elysia
 
 **Production mode:**
+
 ```bash
 bun run build && bun start
 ```
+
 - Single Elysia process on port 3000
 - Serves pre-built static files from `dist/client/`
 - API handlers from `src/server/router/`
 - SPA fallback for client-side routing
 
 **Scaling:**
+
 - Run multiple instances behind a load balancer
 - Stateless by design (use external DB/cache)
 - Environment-specific configuration via YAML/.env
@@ -439,6 +465,7 @@ bun run build && bun start
 ## Core Features
 
 ### Directory-Based Routing
+
 - **Server routes:** `src/server/router/` structure defines API endpoints
 - **Client routes:** `src/client/router/` structure defines pages
 - **Parameter syntax:** `[paramName]` folders become `:paramName` URL segments
@@ -446,18 +473,21 @@ bun run build && bun start
 - **Nested routes:** Support for arbitrary nesting levels
 
 ### Configuration System
+
 - **Multi-source:** Reads from `.env`, `.env.local`, `config.yaml`, `config.yaml.local`
 - **Precedence:** YAML > .env > defaults
 - **Auto-injection:** Config values injected into `process.env`
 - **Nested structure:** Supports hierarchical configuration with dot notation
 
 ### Type Safety
+
 - **Shared types:** Common types in `src/shared/api.ts`
 - **End-to-end:** Same TypeScript interfaces used on server and client
 - **Auto-completion:** Full IDE support with type hints
 - **Compile-time checks:** Catch errors before runtime
 
 ### Middleware System
+
 - **Extensible:** Add custom middleware functions
 - **Logging:** Built-in request logging middleware
 - **Context injection:** Middleware can add to handler context
@@ -466,6 +496,7 @@ bun run build && bun start
 ## Current Status
 
 ✅ **Production-ready features:**
+
 - Full directory-based routing for client and server
 - Type-safe API contracts with shared TypeScript types
 - Configuration system with YAML and .env support
@@ -477,6 +508,7 @@ bun run build && bun start
 - Git initialization in scaffolded projects
 
 🚧 **Future enhancements:**
+
 1. OpenAPI/Swagger documentation generation
 2. Database integration examples (Prisma, Drizzle)
 3. Authentication middleware examples (JWT, sessions)
@@ -493,6 +525,7 @@ bun run build && bun start
 ### For End Users (Using Published Packages)
 
 **1. Create a new project:**
+
 ```bash
 npx create-bev-fs@latest my-app
 cd my-app
@@ -500,6 +533,7 @@ bun install
 ```
 
 **2. Start development servers:**
+
 ```bash
 bun run dev
 # Vite on http://localhost:5173
@@ -509,34 +543,39 @@ bun run dev
 **3. Add features:**
 
 Create a new page:
+
 ```bash
 mkdir -p src/client/router/about
 touch src/client/router/about/index.vue
 ```
 
 Create a new API endpoint:
+
 ```bash
 mkdir -p src/server/router/users
 touch src/server/router/users/index.ts
 ```
 
 Add shared types:
+
 ```typescript
 // src/shared/api.ts
 export interface User {
-  id: number;
-  name: string;
-  email: string;
+  id: number
+  name: string
+  email: string
 }
 ```
 
 **4. Build for production:**
+
 ```bash
 bun run build
 # Outputs to dist/client/ and dist/server/
 ```
 
 **5. Deploy:**
+
 ```bash
 export SERVER_PORT=3000
 export NODE_ENV=production
@@ -546,6 +585,7 @@ bun src/server/index.ts
 ### For Framework Contributors (This Repo)
 
 **1. Clone and setup:**
+
 ```bash
 git clone https://github.com/kamil5b/bev-fs
 cd bun-fullstack
@@ -553,12 +593,14 @@ bun install
 ```
 
 **2. Quick test with automated script:**
+
 ```bash
 # Builds both packages, creates testbed, and starts dev server
 ./testbed.sh
 ```
 
 The `testbed.sh` script automates the entire workflow:
+
 - Builds framework package
 - Builds CLI package
 - Creates test project in `/tmp/bun-testbed`
@@ -567,6 +609,7 @@ The `testbed.sh` script automates the entire workflow:
 - Starts dev servers
 
 **3. Manual build (if needed):**
+
 ```bash
 cd packages/framework
 bun run build
@@ -577,6 +620,7 @@ cd ../..
 ```
 
 **4. Manual test (alternative to testbed.sh):**
+
 ```bash
 # Create a test project using local CLI
 node packages/cli/dist/index.js test-app
@@ -586,17 +630,20 @@ bun run dev
 ```
 
 **4. Make changes:**
+
 - Framework logic: Edit `packages/framework/src/`
 - CLI logic: Edit `packages/cli/src/index.ts`
 - Template: Edit `packages/cli/src/template/`
 
 **5. Rebuild after changes:**
+
 ```bash
 cd packages/framework && bun run build && cd ../..
 cd packages/cli && bun run build && cd ../..
 ```
 
 **6. Publish updates:**
+
 ```bash
 # Update versions in both package.json files:
 # - packages/framework/package.json
@@ -607,6 +654,7 @@ bun run publish
 ```
 
 This automatically:
+
 1. Builds the framework package
 2. Builds the CLI package (including bundled template)
 3. Publishes both to npm
@@ -626,6 +674,7 @@ The fastest way to test your changes:
 ```
 
 This creates a fresh test environment in `/tmp/bun-testbed` with:
+
 - Latest built framework and CLI
 - Local framework linked (not from npm)
 - All dependencies installed
@@ -689,5 +738,7 @@ This creates a fresh test environment in `/tmp/bun-testbed` with:
 ## License
 
 MIT
+
+```
 
 ```

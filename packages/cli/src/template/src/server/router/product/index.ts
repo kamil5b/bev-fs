@@ -1,6 +1,6 @@
-import { Elysia } from 'elysia';
-import type { ProductRequest } from '../../shared';
-import { getProducts, createProduct } from '../../handler/product.handler';
+import { Elysia } from 'elysia'
+import type { ProductRequest } from '../../shared'
+import { getProducts, createProduct } from '../../handler/product.handler'
 
 /**
  * Middleware that applies to all product routes and sub-routes
@@ -10,17 +10,17 @@ export const middleware = [
   (app: Elysia) => {
     app.derive(({ request }) => ({
       startTime: Date.now(),
-    }));
+    }))
   },
-];
+]
 
 // GET /api/product - list all products
 export const GET = () => {
-  return getProducts();
-};
+  return getProducts()
+}
 
 // POST /api/product - create a product
 // Method-specific middleware just for POST
 export const POST = ({ body }: { body: ProductRequest.Create }) => {
-  return createProduct(body);
-};
+  return createProduct(body)
+}

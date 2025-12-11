@@ -15,7 +15,9 @@
           <span v-if="!loading" class="upload-icon">📁</span>
           <span v-else class="upload-icon">⏳</span>
           <span class="upload-text">
-            {{ loading ? 'Uploading...' : 'Click to select files or drag & drop' }}
+            {{
+              loading ? 'Uploading...' : 'Click to select files or drag & drop'
+            }}
           </span>
         </label>
       </div>
@@ -43,7 +45,11 @@
     <div v-if="uploadedFiles.length > 0" class="files-section">
       <h3>Uploaded Files ({{ uploadedFiles.length }})</h3>
       <div class="files-list">
-        <div v-for="file in uploadedFiles" :key="file.fileName" class="file-item">
+        <div
+          v-for="file in uploadedFiles"
+          :key="file.fileName"
+          class="file-item"
+        >
           <div class="file-info">
             <span class="file-icon">📄</span>
             <div class="file-details">
@@ -81,51 +87,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useFileUpload } from '../composables/useFileUpload';
+import { ref, onMounted } from 'vue'
+import { useFileUpload } from '../composables/useFileUpload'
 
-const fileInput = ref<HTMLInputElement>();
-const isDragging = ref(false);
+const fileInput = ref<HTMLInputElement>()
+const isDragging = ref(false)
 
-const { loading, error, uploadedFiles, upload, deleteFile, downloadFile, listFiles, clearError } =
-  useFileUpload();
+const {
+  loading,
+  error,
+  uploadedFiles,
+  upload,
+  deleteFile,
+  downloadFile,
+  listFiles,
+  clearError,
+} = useFileUpload()
 
 onMounted(async () => {
-  await listFiles();
-});
+  await listFiles()
+})
 
 function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement;
-  const files = target.files ? Array.from(target.files) : [];
+  const target = event.target as HTMLInputElement
+  const files = target.files ? Array.from(target.files) : []
   if (files.length > 0) {
-    uploadFiles(files);
+    uploadFiles(files)
   }
   // Reset input
   if (fileInput.value) {
-    fileInput.value.value = '';
+    fileInput.value.value = ''
   }
 }
 
 async function handleDownload(fileName: string) {
-  await downloadFile(fileName);
+  await downloadFile(fileName)
 }
 
 async function uploadFiles(files: File[]) {
-  await upload(files);
+  await upload(files)
 }
 
 async function handleDelete(fileName: string) {
   if (confirm(`Delete "${fileName}"?`)) {
-    await deleteFile(fileName);
+    await deleteFile(fileName)
   }
 }
 
 function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i]
 }
 </script>
 

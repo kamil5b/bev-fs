@@ -1,2 +1,2 @@
 // Shared types and utilities
-export type Json = Record<string, unknown>;
+export type Json = Record<string, unknown>

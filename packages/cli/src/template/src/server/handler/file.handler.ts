@@ -1,6 +1,11 @@
-import type { FileUploadResponse, FileDeleteResponse, FileListResponse } from '../shared';
-import { defaultFileService } from "../service/file.service";
-import path from "path";
+import type {
+  FileUploadResponse,
+  FileDeleteResponse,
+  FileListResponse,
+  ErrorResponse,
+} from '../../shared'
+import { defaultFileService } from '../service/file.service'
+import path from 'path'
 
 /**
  * File handler - HTTP request handling for file operations
@@ -8,42 +13,71 @@ import path from "path";
  */
 
 // File upload validation constraints
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 const ALLOWED_EXTENSIONS = [
-  ".pdf", ".doc", ".docx", ".txt", ".xlsx", ".csv", ".json",
-  ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"
-];
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.txt',
+  '.xlsx',
+  '.csv',
+  '.json',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.svg',
+]
 const ALLOWED_MIME_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "text/csv",
-  "application/json",
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/bmp",
-  "image/webp",
-  "image/svg+xml"
-];
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+  'application/json',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/bmp',
+  'image/webp',
+  'image/svg+xml',
+]
 
 /**
  * Validate file name to prevent directory traversal attacks
+ * Uses whitelist approach: only allows alphanumeric, dots, hyphens, underscores
+ * Prevents hidden files (starting with dot)
  */
 function validateFileName(fileName: string): boolean {
-  // Prevent directory traversal
-  if (fileName.includes("..") || fileName.includes("/") || fileName.includes("\\")) {
-    return false;
+  // Whitelist: only alphanumeric, dots, hyphens, underscores
+  // Pattern breakdown: [a-zA-Z0-9._-]+ = allowed chars, no leading dot
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(fileName)) {
+    return false
   }
-  
+
+  // Additional checks for edge cases
+  if (
+    fileName.includes('..') ||
+    fileName.includes('/') ||
+    fileName.includes('\\')
+  ) {
+    return false
+  }
+
   // Check for null bytes
-  if (fileName.includes("\x00")) {
-    return false;
+  if (fileName.includes('\x00')) {
+    return false
   }
-  
-  return true;
+
+  // Ensure filename is not excessively long (max 255 chars is typical filesystem limit)
+  if (fileName.length > 255) {
+    return false
+  }
+
+  return true
 }
 
 /**
@@ -55,238 +89,244 @@ function validateFile(file: File): { valid: boolean; error?: string } {
     return {
       valid: false,
       error: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-    };
+    }
   }
 
   // Check file extension
-  const extension = path.extname(file.name).toLowerCase();
+  const extension = path.extname(file.name).toLowerCase()
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     return {
       valid: false,
-      error: `File type not allowed. Allowed types: ${ALLOWED_EXTENSIONS.join(", ")}`,
-    };
+      error: `File type not allowed. Allowed types: ${ALLOWED_EXTENSIONS.join(', ')}`,
+    }
   }
 
   // Check MIME type
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     return {
       valid: false,
-      error: `Invalid MIME type: ${file.type}. Allowed types: ${ALLOWED_MIME_TYPES.join(", ")}`,
-    };
+      error: `Invalid MIME type: ${file.type}. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`,
+    }
   }
 
-  return { valid: true };
+  return { valid: true }
 }
 
 /**
  * GET /api/file - List all uploaded files
  */
-export const handleListFiles = async () => {
+export const handleListFiles = async (): Promise<
+  FileListResponse | ErrorResponse
+> => {
   try {
-    const response = await defaultFileService.listFiles();
+    const response = await defaultFileService.listFiles()
 
     if (!response.success) {
       return {
         success: false,
-        message: "Failed to list files"
-      };
+        message: 'Failed to list files',
+      } as ErrorResponse
     }
 
     return {
       success: true,
       files: response.files,
-      count: response.files.length
-    };
+    } as FileListResponse
   } catch (error) {
-    console.error("List files error:", error);
+    console.error('List files error:', error)
     return {
       success: false,
-      message: "Failed to list files",
-      error: String(error)
-    };
+      message: 'Failed to list files',
+    } as ErrorResponse
   }
-};
+}
 
 /**
  * POST /api/file - Upload one or more files
  */
-export const handleUploadFiles = async (files: File[], context?: any) => {
+export const handleUploadFiles = async (
+  files: File[],
+  context?: any,
+): Promise<FileUploadResponse | ErrorResponse> => {
   try {
     if (!files || files.length === 0) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "No files provided"
-      };
+        message: 'No files provided',
+      } as ErrorResponse
     }
 
     // Validate all files before uploading
-    const validationErrors: Record<string, string> = {};
-    
+    const validationErrors: Record<string, string> = {}
+
     for (const file of files) {
       // Validate file name
       if (!validateFileName(file.name)) {
-        validationErrors[file.name] = "Invalid file name";
-        continue;
+        validationErrors[file.name] = 'Invalid file name'
+        continue
       }
 
       // Validate file
-      const validation = validateFile(file);
+      const validation = validateFile(file)
       if (!validation.valid) {
-        validationErrors[file.name] = validation.error || "Unknown validation error";
+        validationErrors[file.name] =
+          validation.error || 'Unknown validation error'
       }
     }
 
     // Return validation errors if any (400 Bad Request)
     if (Object.keys(validationErrors).length > 0) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "File validation failed",
-        errors: validationErrors
-      };
+        message: 'File validation failed',
+      } as ErrorResponse
     }
 
-    const response = await defaultFileService.uploadFiles(files);
+    const response = await defaultFileService.uploadFiles(files)
 
     if (!response.success) {
       if (context) {
-        context.set.status = 500;
+        context.set.status = 500
       }
       return {
         success: false,
-        message: "Upload failed"
-      };
+        message: 'Upload failed',
+      } as ErrorResponse
     }
 
     return {
       success: true,
-      message: "Files uploaded successfully",
       files: response.files,
-      count: response.files.length
-    };
+    } as FileUploadResponse
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error('Upload error:', error)
     if (context) {
-      context.set.status = 500;
+      context.set.status = 500
     }
     return {
       success: false,
-      message: "Upload failed",
-      error: String(error)
-    };
+      message: 'Upload failed',
+    } as ErrorResponse
   }
-};
+}
 
 /**
  * GET /api/file/:fileName - Download a specific file
  */
-export const handleDownloadFile = async (fileName: string, context?: any) => {
+export const handleDownloadFile = async (
+  fileName: string,
+  context?: any,
+): Promise<Response | ErrorResponse> => {
   try {
     if (!fileName) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "File name is required"
-      };
+        message: 'File name is required',
+      } as ErrorResponse
     }
 
     // Validate file name to prevent path traversal
     if (!validateFileName(fileName)) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "Invalid file name"
-      };
+        message: 'Invalid file name',
+      } as ErrorResponse
     }
 
-    const fileContent = await defaultFileService.getFile(fileName);
+    const fileContent = await defaultFileService.getFile(fileName)
 
     if (!fileContent) {
       if (context) {
-        context.set.status = 404;
+        context.set.status = 404
       }
       return {
         success: false,
-        message: `File '${fileName}' not found`
-      };
+        message: `File '${fileName}' not found`,
+      } as ErrorResponse
     }
 
     return new Response(fileContent, {
       headers: {
-        "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Type": "application/octet-stream",
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Type': 'application/octet-stream',
       },
-    });
+    })
   } catch (error) {
-    console.error("Download file error:", error);
+    console.error('Download file error:', error)
     if (context) {
-      context.set.status = 500;
+      context.set.status = 500
     }
     return {
       success: false,
-      message: "Failed to download file",
-      error: String(error)
-    };
+      message: 'Failed to download file',
+    } as ErrorResponse
   }
-};
+}
 
 /**
  * DELETE /api/file/:fileName - Delete a specific file
  */
-export const handleDeleteFile = async (fileName: string, context?: any) => {
+export const handleDeleteFile = async (
+  fileName: string,
+  context?: any,
+): Promise<FileDeleteResponse | ErrorResponse> => {
   try {
     if (!fileName) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "File name is required"
-      };
+        message: 'File name is required',
+      } as ErrorResponse
     }
 
     // Validate file name to prevent path traversal
     if (!validateFileName(fileName)) {
       if (context) {
-        context.set.status = 400;
+        context.set.status = 400
       }
       return {
         success: false,
-        message: "Invalid file name"
-      };
+        message: 'Invalid file name',
+      } as ErrorResponse
     }
 
-    const response = await defaultFileService.deleteFile(fileName);
+    const response = await defaultFileService.deleteFile(fileName)
 
     if (response.success) {
       return {
         success: true,
-        message: `File '${fileName}' deleted successfully`
-      };
+      } as FileDeleteResponse
     } else {
       if (context) {
-        context.set.status = 404;
+        context.set.status = 404
       }
       return {
         success: false,
-        message: `File '${fileName}' not found`
-      };
+        message: `File '${fileName}' not found`,
+      } as ErrorResponse
     }
   } catch (error) {
-    console.error("Delete file error:", error);
+    console.error('Delete file error:', error)
+    if (context) {
+      context.set.status = 500
+    }
     return {
       success: false,
-      message: "Failed to delete file",
-      error: String(error)
-    };
+      message: 'Failed to delete file',
+    } as ErrorResponse
   }
-};
+}

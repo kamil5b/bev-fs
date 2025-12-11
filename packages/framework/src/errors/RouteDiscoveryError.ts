@@ -5,9 +5,9 @@ export class RouteDiscoveryError extends Error {
   constructor(
     public readonly routerDir: string,
     message: string,
-    public readonly originalError?: unknown
+    public readonly originalError?: unknown,
   ) {
-    super(message);
-    this.name = "RouteDiscoveryError";
+    super(message)
+    this.name = 'RouteDiscoveryError'
   }
 }

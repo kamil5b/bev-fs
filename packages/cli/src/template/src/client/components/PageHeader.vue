@@ -1,7 +1,9 @@
 <template>
   <div class="page-header">
     <div class="back-link">
-      <router-link v-if="showBackLink" :to="backTo" class="link">← {{ backLabel }}</router-link>
+      <router-link v-if="showBackLink" :to="backTo" class="link"
+        >← {{ backLabel }}</router-link
+      >
     </div>
     <h1>{{ title }}</h1>
   </div>
@@ -10,17 +12,17 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    title: string;
-    showBackLink?: boolean;
-    backTo?: string;
-    backLabel?: string;
+    title: string
+    showBackLink?: boolean
+    backTo?: string
+    backLabel?: string
   }>(),
   {
     showBackLink: true,
     backTo: '/',
-    backLabel: 'Back'
-  }
-);
+    backLabel: 'Back',
+  },
+)
 </script>
 
 <style scoped>

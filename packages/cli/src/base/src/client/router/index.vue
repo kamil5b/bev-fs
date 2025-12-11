@@ -2,7 +2,7 @@
   <div class="home">
     <h1>Welcome to Bun Elysia Vue Base</h1>
     <p>This is a minimal framework-driven starter template.</p>
-    
+
     <div class="features">
       <div class="feature">
         <h3>⚡ Bun</h3>
@@ -20,8 +20,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <style scoped>
 .home {

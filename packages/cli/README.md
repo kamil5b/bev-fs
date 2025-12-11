@@ -25,6 +25,7 @@ create-bev-fs my-awesome-app
 ```
 
 The tool will prompt you to:
+
 1. Select a template (base or full)
 2. Choose whether to add Tailwind CSS
 
@@ -35,6 +36,7 @@ create-bev-fs my-app --template full --tailwind
 ```
 
 **Options:**
+
 - `--template <base|full>` — Choose template type (default: interactive)
 - `--tailwind` — Enable Tailwind CSS setup (default: interactive)
 
@@ -43,6 +45,7 @@ create-bev-fs my-app --template full --tailwind
 ### Base Template
 
 A minimal, starting-point template with:
+
 - Basic Vue 3 client setup
 - Simple server with middleware and routing
 - Shared types and entities
@@ -53,6 +56,7 @@ A minimal, starting-point template with:
 ### Full Template
 
 A feature-rich template with:
+
 - Complete product management example
 - File upload handling with progress tracking
 - Database integration (SQLite via `store.ts`)
@@ -68,6 +72,7 @@ A feature-rich template with:
 ## Tailwind CSS Integration
 
 When Tailwind CSS is selected during setup, the CLI:
+
 - Installs Tailwind dependencies
 - Generates `tailwind.config.js` and `postcss.config.js`
 - Creates `index.css` with Tailwind directives
@@ -164,6 +169,7 @@ npm run build
 ```
 
 This:
+
 1. Compiles TypeScript to `dist/`
 2. Copies template directories to `dist/`
 3. Prepares distribution for npm publish
@@ -181,6 +187,7 @@ SERVER_STATIC_DIR=dist/client
 ## Support
 
 For issues or questions about:
+
 - **CLI generation** — See this README
 - **Framework usage** — Check `GUIDE.md` in your generated project
 - **bev-fs framework** — See `packages/framework/FRAMEWORK.md`

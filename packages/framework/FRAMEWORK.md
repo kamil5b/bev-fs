@@ -21,18 +21,19 @@ The framework exposes four main functions via `bev-fs`:
 Initializes your Vue 3 app with **directory-based routing**.
 
 ```typescript
-import { createFrameworkApp } from "bev-fs";
-import App from "./App.vue";
+import { createFrameworkApp } from 'bev-fs'
+import App from './App.vue'
 
 const { app, router } = createFrameworkApp(App, {
-  routeModules: import.meta.glob("./router/**/index.vue", { eager: true }),
-  historyMode: true
-});
+  routeModules: import.meta.glob('./router/**/index.vue', { eager: true }),
+  historyMode: true,
+})
 
-app.mount("#app");
+app.mount('#app')
 ```
 
 **Parameters:**
+
 - `rootComponent` — Your root Vue component (typically `App.vue`)
 - `opts` — Configuration options:
   - `routeModules` — Import glob result from `import.meta.glob()` (auto-discovery mode)
@@ -40,6 +41,7 @@ app.mount("#app");
   - `historyMode` — Use HTML5 history mode (default: `true`)
 
 **Returns:**
+
 - `{ app, router }` — Vue app instance and vue-router instance
 
 #### How Route Discovery Works
@@ -60,6 +62,7 @@ src/client/router/
 ```
 
 **Key behaviors:**
+
 - Only `index.vue` files in `router/` directories are processed
 - Directory names become route segments
 - Square brackets `[paramName]` become dynamic parameters (`:paramName`)
@@ -73,22 +76,21 @@ src/client/router/
 Sets up your Elysia server with **directory-based API routing** and configuration loading.
 
 ```typescript
-import { createFrameworkServer } from "bev-fs";
-import path from "path";
+import { createFrameworkServer } from 'bev-fs'
+import path from 'path'
 
 const { app, listen } = await createFrameworkServer({
-  routerDir: path.join(process.cwd(), "src/server/router"),
-  staticDir: path.join(process.cwd(), "dist/client"),
+  routerDir: path.join(process.cwd(), 'src/server/router'),
+  staticDir: path.join(process.cwd(), 'dist/client'),
   port: 3000,
-  middleware: [
-    (app) => app.use(customMiddleware())
-  ]
-});
+  middleware: [(app) => app.use(customMiddleware())],
+})
 
-await listen();
+await listen()
 ```
 
 **Parameters:**
+
 - `routerDir` — Where your API handlers live (default: `src/server/router`)
 - `staticDir` — Built client files location (default: `dist/client`)
 - `port` — Server port (default: `3000`)
@@ -96,6 +98,7 @@ await listen();
 - `middleware` — Array of middleware functions that receive and mutate the Elysia app
 
 **Returns:**
+
 - `{ app, listen }` — Elysia app instance and listen function
 
 #### Configuration Loading
@@ -108,6 +111,7 @@ The server automatically loads configuration in this precedence order:
 4. **.env** (tracked env defaults)
 
 **Example config.yaml:**
+
 ```yaml
 server:
   port: 3000
@@ -120,6 +124,7 @@ client:
 ```
 
 **Example .env:**
+
 ```
 SERVER_PORT=3000
 SERVER_ROUTER_DIR=src/server/router
@@ -150,26 +155,27 @@ Each `index.ts` file exports HTTP method handlers:
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import type { Context } from "elysia";
-import { ProductService } from "../../service/product.service";
+import type { Context } from 'elysia'
+import { ProductService } from '../../service/product.service'
 
 export const GET = async ({ params }: Context) => {
-  const product = await ProductService.getById(params.id);
-  return product;
-};
+  const product = await ProductService.getById(params.id)
+  return product
+}
 
 export const PATCH = async ({ params, body }: Context) => {
-  const updated = await ProductService.update(params.id, body);
-  return updated;
-};
+  const updated = await ProductService.update(params.id, body)
+  return updated
+}
 
 export const DELETE = async ({ params }: Context) => {
-  await ProductService.delete(params.id);
-  return { success: true };
-};
+  await ProductService.delete(params.id)
+  return { success: true }
+}
 ```
 
 **Available exports:**
+
 - `GET` — Handle GET requests
 - `POST` — Handle POST requests
 - `PUT` — Handle PUT requests
@@ -183,30 +189,32 @@ export const DELETE = async ({ params }: Context) => {
 Middleware can be applied at route-level or per HTTP method:
 
 **Route-level middleware:**
+
 ```typescript
 // src/server/router/product/index.ts
 export const middleware = async (app) => {
-  return app.use(authMiddleware());
-};
+  return app.use(authMiddleware())
+}
 
 export const GET = async () => {
   // Protected by middleware
-  return [];
-};
+  return []
+}
 ```
 
 **Per-method middleware:**
+
 ```typescript
 export const middleware = {
   POST: async (app) => {
-    return app.use(validateBodyMiddleware());
-  }
-};
+    return app.use(validateBodyMiddleware())
+  },
+}
 
 export const POST = async ({ body }) => {
   // Only POST requests use the middleware
-  return body;
-};
+  return body
+}
 ```
 
 ---
@@ -216,25 +224,26 @@ export const POST = async ({ body }) => {
 Vue composables to access the router and current route in your components. These work around Vue Router's plugin injection issues and provide a clean API.
 
 ```typescript
-import { useAppRouter, useAppRoute } from "bev-fs";
+import { useAppRouter, useAppRoute } from 'bev-fs'
 
 export default {
   setup() {
-    const router = useAppRouter();
-    const route = useAppRoute();
+    const router = useAppRouter()
+    const route = useAppRoute()
 
     const navigateToProduct = (id: string) => {
-      router?.push(`/product/${id}`);
-    };
+      router?.push(`/product/${id}`)
+    }
 
-    const productId = route?.params?.id;
+    const productId = route?.params?.id
 
-    return { navigateToProduct, productId };
-  }
-};
+    return { navigateToProduct, productId }
+  },
+}
 ```
 
 **Returns:**
+
 - `useAppRouter()` — Vue Router instance with `push()`, `replace()`, etc.
 - `useAppRoute()` — Current route object with `params`, `query`, `path`, etc.
 
@@ -247,20 +256,22 @@ export default {
 Helper function to create a type-safe route definition with API integration:
 
 ```typescript
-import { createRoute } from "bev-fs";
+import { createRoute } from 'bev-fs'
 
 // Define your routes
-export const productRoute = createRoute("/product");
+export const productRoute = createRoute('/product')
 
 // Use it
-const apiUrl = productRoute.api("/123"); // → /api/product/123
-const routePath = productRoute.path;     // → /product
+const apiUrl = productRoute.api('/123') // → /api/product/123
+const routePath = productRoute.path // → /product
 ```
 
 **Parameters:**
+
 - `path` — Route path (e.g., `/product`)
 
 **Returns:**
+
 ```typescript
 {
   path: string;              // The path you provided
@@ -271,17 +282,17 @@ const routePath = productRoute.path;     // → /product
 #### Example Usage
 
 ```typescript
-import { createRoute } from "bev-fs";
+import { createRoute } from 'bev-fs'
 
 export const routes = {
-  home: createRoute("/"),
-  products: createRoute("/products"),
-  productDetail: createRoute("/products")
-};
+  home: createRoute('/'),
+  products: createRoute('/products'),
+  productDetail: createRoute('/products'),
+}
 
 // In your component
-const productId = "123";
-const endpoint = routes.products.api(`/${productId}`); // → /api/products/123
+const productId = '123'
+const endpoint = routes.products.api(`/${productId}`) // → /api/products/123
 ```
 
 ---
@@ -295,12 +306,12 @@ The framework exports utility functions for working with file-based routing:
 Converts a file path to a route path:
 
 ```typescript
-import { convertPathToRoute } from "bev-fs";
+import { convertPathToRoute } from 'bev-fs'
 
-convertPathToRoute("./router/index.vue")                    // → "/"
-convertPathToRoute("./router/product/index.vue")            // → "/product"
-convertPathToRoute("./router/product/[id]/index.vue")       // → "/product/:id"
-convertPathToRoute("./router/product/[id]/progress/index.vue") // → "/product/:id/progress"
+convertPathToRoute('./router/index.vue') // → "/"
+convertPathToRoute('./router/product/index.vue') // → "/product"
+convertPathToRoute('./router/product/[id]/index.vue') // → "/product/:id"
+convertPathToRoute('./router/product/[id]/progress/index.vue') // → "/product/:id/progress"
 ```
 
 #### `isIndexFile(fileName)`
@@ -308,11 +319,11 @@ convertPathToRoute("./router/product/[id]/progress/index.vue") // → "/product/
 Check if a filename is an index file:
 
 ```typescript
-import { isIndexFile } from "bev-fs";
+import { isIndexFile } from 'bev-fs'
 
-isIndexFile("index.ts")   // → true
-isIndexFile("index.vue")  // → true
-isIndexFile("helpers.ts") // → false
+isIndexFile('index.ts') // → true
+isIndexFile('index.vue') // → true
+isIndexFile('helpers.ts') // → false
 ```
 
 #### `convertDirNameToSegment(dirName)`
@@ -320,10 +331,10 @@ isIndexFile("helpers.ts") // → false
 Convert a directory name to a route segment:
 
 ```typescript
-import { convertDirNameToSegment } from "bev-fs";
+import { convertDirNameToSegment } from 'bev-fs'
 
-convertDirNameToSegment("product")  // → "product"
-convertDirNameToSegment("[id]")     // → ":id"
+convertDirNameToSegment('product') // → "product"
+convertDirNameToSegment('[id]') // → ":id"
 ```
 
 ---
@@ -335,6 +346,7 @@ convertDirNameToSegment("[id]")     // → ":id"
 All configuration values are loaded into `process.env` with the pattern: `SECTION_KEY_TOUPPPERCASE`
 
 Examples:
+
 - `server.port` → `process.env.SERVER_PORT`
 - `server.routerDir` → `process.env.SERVER_ROUTER_DIR`
 - `client.apiBaseUrl` → `process.env.CLIENT_API_BASE_URL`
@@ -343,8 +355,8 @@ This allows you to access configuration anywhere in your code:
 
 ```typescript
 // In any server file
-const port = process.env.SERVER_PORT || 3000;
-const dbPath = process.env.SERVER_DB_PATH;
+const port = process.env.SERVER_PORT || 3000
+const dbPath = process.env.SERVER_DB_PATH
 ```
 
 ### Config Precedence
@@ -385,50 +397,50 @@ Store/Database
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import { ProductService } from "../../service/product.service";
+import { ProductService } from '../../service/product.service'
 
 export const GET = async ({ params }) => {
   // Handler: minimal logic, just delegate
-  return ProductService.getById(params.id);
-};
+  return ProductService.getById(params.id)
+}
 
 export const PATCH = async ({ params, body }) => {
   // Handler: parse, validate, delegate
-  return ProductService.update(params.id, body);
-};
+  return ProductService.update(params.id, body)
+}
 
 export const DELETE = async ({ params }) => {
   // Handler: delegate
-  return ProductService.delete(params.id);
-};
+  return ProductService.delete(params.id)
+}
 ```
 
 ```typescript
 // src/server/service/product.service.ts
-import { ProductRepository } from "../repository/product.repository";
+import { ProductRepository } from '../repository/product.repository'
 
 export const ProductService = {
   async getById(id: string) {
     // Service: business logic, transform data
-    const product = await ProductRepository.findById(id);
+    const product = await ProductRepository.findById(id)
     return {
       ...product,
-      formattedDate: new Date(product.createdAt).toISOString()
-    };
+      formattedDate: new Date(product.createdAt).toISOString(),
+    }
   },
 
   async update(id: string, data: any) {
     // Service: validation, business logic
-    if (!data.name) throw new Error("Name is required");
-    return ProductRepository.update(id, data);
+    if (!data.name) throw new Error('Name is required')
+    return ProductRepository.update(id, data)
   },
 
   async delete(id: string) {
     // Service: cascading operations, cleanup
-    await ProductRepository.delete(id);
-    return { deleted: true };
-  }
-};
+    await ProductRepository.delete(id)
+    return { deleted: true }
+  },
+}
 ```
 
 ### Type-Safe API Calls
@@ -438,23 +450,23 @@ Use the shared types between client and server:
 ```typescript
 // src/shared/responses/product.response.ts
 export interface ProductResponse {
-  id: string;
-  name: string;
-  price: number;
+  id: string
+  name: string
+  price: number
 }
 ```
 
 ```typescript
 // src/client/composables/useProductAPI.ts
-import type { ProductResponse } from "@/shared/responses/product.response";
+import type { ProductResponse } from '@/shared/responses/product.response'
 
 export function useProductAPI() {
   const getProduct = async (id: string): Promise<ProductResponse> => {
-    const res = await fetch(`/api/product/${id}`);
-    return res.json();
-  };
+    const res = await fetch(`/api/product/${id}`)
+    return res.json()
+  }
 
-  return { getProduct };
+  return { getProduct }
 }
 ```
 
@@ -546,6 +558,7 @@ DELETE /api/resource/:id/sub/:subId
 ```
 
 Create this directory structure:
+
 ```
 src/server/router/
 └── resource/
@@ -564,7 +577,7 @@ The framework supports **hierarchical middleware inheritance**. Middleware defin
 
 ```typescript
 // src/server/router/product/index.ts
-import { Elysia } from 'elysia';
+import { Elysia } from 'elysia'
 
 // Middleware applies to GET, POST, PUT, PATCH, DELETE on this route
 // AND to all nested routes: /product/[id], /product/[id]/progress, etc.
@@ -572,42 +585,42 @@ export const middleware = [
   (app: Elysia) => {
     app.derive(() => ({
       startTime: Date.now(),
-    }));
+    }))
   },
-];
+]
 
-export const GET = () => ({ products: [] });
-export const POST = ({ body }: any) => ({ id: 1 });
+export const GET = () => ({ products: [] })
+export const POST = ({ body }: any) => ({ id: 1 })
 ```
 
 #### Method-Specific Middleware
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import { Elysia } from 'elysia';
+import { Elysia } from 'elysia'
 
 // Apply different middleware to different methods
 export const middleware = {
   GET: [
     (app: Elysia) => {
       // Logging only for GET requests
-      app.derive(() => ({ method: 'GET' }));
+      app.derive(() => ({ method: 'GET' }))
     },
   ],
   DELETE: [
     (app: Elysia) => {
       // Authorization only for DELETE requests
       app.derive(({ headers }) => {
-        const token = headers["authorization"];
-        if (!token) throw new Error("Unauthorized");
-        return { authorized: true };
-      });
+        const token = headers['authorization']
+        if (!token) throw new Error('Unauthorized')
+        return { authorized: true }
+      })
     },
   ],
-};
+}
 
-export const GET = ({ params }: any) => ({ id: params.id });
-export const DELETE = ({ params }: any) => ({ success: true });
+export const GET = ({ params }: any) => ({ id: params.id })
+export const DELETE = ({ params }: any) => ({ success: true })
 ```
 
 #### Middleware Inheritance Chain Example
@@ -634,82 +647,85 @@ Middleware execution order:
 
 ```typescript
 // src/server/middleware.ts
-import { Elysia } from 'elysia';
+import { Elysia } from 'elysia'
 
 export function createAuthMiddleware() {
   return (app: Elysia) => {
     app.derive(({ headers }) => {
-      const token = headers["authorization"]?.split(" ")[1];
-      if (!token) throw new Error("Unauthorized");
-      return { userId: decodeToken(token) };
-    });
-  };
+      const token = headers['authorization']?.split(' ')[1]
+      if (!token) throw new Error('Unauthorized')
+      return { userId: decodeToken(token) }
+    })
+  }
 }
 
 export function createAdminMiddleware() {
   return (app: Elysia) => {
     app.derive(({ userId }) => {
-      if (userId !== 'admin') throw new Error("Forbidden");
-      return { isAdmin: true };
-    });
-  };
+      if (userId !== 'admin') throw new Error('Forbidden')
+      return { isAdmin: true }
+    })
+  }
 }
 
 export function createValidationMiddleware(schema: any) {
   return (app: Elysia) => {
     app.derive(({ body }) => {
-      const validation = validateBody(body, schema);
-      if (!validation.valid) throw new Error(validation.error);
-      return { validated: true };
-    });
-  };
+      const validation = validateBody(body, schema)
+      if (!validation.valid) throw new Error(validation.error)
+      return { validated: true }
+    })
+  }
 }
 ```
 
 ```typescript
 // src/server/router/admin/users/index.ts
-import { createAuthMiddleware, createAdminMiddleware } from '../../../middleware';
+import {
+  createAuthMiddleware,
+  createAdminMiddleware,
+} from '../../../middleware'
 
-export const middleware = [
-  createAuthMiddleware(),
-  createAdminMiddleware(),
-];
+export const middleware = [createAuthMiddleware(), createAdminMiddleware()]
 
 export const GET = ({ userId }: any) => {
-  return { users: [], requestedBy: userId };
-};
+  return { users: [], requestedBy: userId }
+}
 
 export const DELETE = ({ body, userId }: any) => {
-  return { deleted: true, deletedBy: userId };
-};
+  return { deleted: true, deletedBy: userId }
+}
 ```
 
 #### Mixing Route-Level and Method-Specific Middleware
 
 ```typescript
 // src/server/router/data/[id]/index.ts
-import { Elysia } from 'elysia';
-import { createAuthMiddleware, createAdminMiddleware } from '../../../middleware';
+import { Elysia } from 'elysia'
+import {
+  createAuthMiddleware,
+  createAdminMiddleware,
+} from '../../../middleware'
 
 // Route-level: applies to all methods
 export const middleware = [
-  createAuthMiddleware(),  // All methods require auth
-];
+  createAuthMiddleware(), // All methods require auth
+]
 
 // Method-specific: only for DELETE
 export const middleware = {
   DELETE: [
-    createAdminMiddleware(),  // DELETE also requires admin (in addition to auth)
+    createAdminMiddleware(), // DELETE also requires admin (in addition to auth)
   ],
-};
+}
 
 export const GET = ({ userId }: any) => {
-  return { data: [], user: userId };  // userId from auth middleware
-};
+  return { data: [], user: userId } // userId from auth middleware
+}
 
 export const DELETE = ({ userId, isAdmin }: any) => {
-  return { success: true, deletedBy: userId };  // userId + isAdmin available
-};
+  return { success: true, deletedBy: userId } // userId + isAdmin available
+}
 ```
 
 ---
@@ -721,6 +737,7 @@ export const DELETE = ({ userId, isAdmin }: any) => {
 **Problem:** Your routes aren't showing up in the router.
 
 **Solutions:**
+
 1. Check that your files are in `src/client/router/` directory
 2. Ensure files are named `index.vue` (not `index.ts` or other names)
 3. Verify the glob pattern in `main.ts`: `import.meta.glob("./router/**/index.vue", { eager: true })`
@@ -731,6 +748,7 @@ export const DELETE = ({ userId, isAdmin }: any) => {
 **Problem:** Your API endpoints aren't accessible.
 
 **Solutions:**
+
 1. Verify files are in `src/server/router/` directory
 2. Check that files are named `index.ts` and export HTTP method functions
 3. Make sure route functions are properly exported (not default exports)
@@ -742,6 +760,7 @@ export const DELETE = ({ userId, isAdmin }: any) => {
 **Problem:** Types don't match between client and server.
 
 **Solutions:**
+
 1. Define shared types in `src/shared/`
 2. Import types in both client and server from shared
 3. Ensure server responses match the expected type
@@ -758,16 +777,17 @@ Initialize Vue 3 app with directory-based routing.
 ```typescript
 function createFrameworkApp(
   rootComponent: any,
-  opts?: ClientOptions
+  opts?: ClientOptions,
 ): { app: VueApp; router: Router }
 ```
 
 **Options:**
+
 ```typescript
 type ClientOptions = {
-  routes?: any[];                          // Manual routes (overrides glob)
-  routeModules?: Record<string, any>;      // import.meta.glob result
-  historyMode?: boolean;                   // HTML5 history mode (default: true)
+  routes?: any[] // Manual routes (overrides glob)
+  routeModules?: Record<string, any> // import.meta.glob result
+  historyMode?: boolean // HTML5 history mode (default: true)
 }
 ```
 
@@ -779,18 +799,19 @@ Initialize Elysia server with directory-based routing.
 
 ```typescript
 async function createFrameworkServer(
-  opts?: ServerOptions
+  opts?: ServerOptions,
 ): Promise<{ app: Elysia; listen: (port?: number) => void }>
 ```
 
 **Options:**
+
 ```typescript
 type ServerOptions = {
-  routerDir?: string;           // Route handlers directory
-  staticDir?: string;           // Static files directory
-  port?: number;                // Server port
-  env?: "development" | "production";
-  middleware?: ((app: Elysia) => void)[];
+  routerDir?: string // Route handlers directory
+  staticDir?: string // Static files directory
+  port?: number // Server port
+  env?: 'development' | 'production'
+  middleware?: ((app: Elysia) => void)[]
 }
 ```
 
@@ -802,7 +823,7 @@ Create a type-safe route helper.
 
 ```typescript
 function createRoute<T extends string>(
-  path: T
+  path: T,
 ): { path: T; api(pathSuffix?: string): string }
 ```
 

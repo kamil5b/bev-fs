@@ -15,52 +15,64 @@
         placeholder="Progress percentage"
         class="input"
       />
-      <textarea 
-        v-model="formData.description" 
-        placeholder="Progress description" 
+      <textarea
+        v-model="formData.description"
+        placeholder="Progress description"
         class="input"
       ></textarea>
-      <button @click="$emit('submit')" class="btn btn-primary">{{ buttonLabel }}</button>
+      <button @click="$emit('submit')" class="btn btn-primary">
+        {{ buttonLabel }}
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-import type { ProgressStatus } from '../../shared';
+import { ref, watch } from 'vue'
+import type { ProgressStatus } from '../../shared'
 
 interface Props {
-  initialStatus?: ProgressStatus;
-  initialDescription?: string;
-  initialPercentage?: number;
-  buttonLabel?: string;
+  initialStatus?: ProgressStatus
+  initialDescription?: string
+  initialPercentage?: number
+  buttonLabel?: string
 }
 
 withDefaults(defineProps<Props>(), {
   initialStatus: 'pending' as ProgressStatus,
   initialDescription: '',
   initialPercentage: 0,
-  buttonLabel: 'Submit'
-});
+  buttonLabel: 'Submit',
+})
 
 const emit = defineEmits<{
-  submit: [];
-  update: [data: { status: ProgressStatus; description: string; percentage: number }];
-}>();
+  submit: []
+  update: [
+    data: { status: ProgressStatus; description: string; percentage: number },
+  ]
+}>()
 
-const formData = ref<{ status: ProgressStatus; description: string; percentage: number }>({ 
-  status: 'pending', 
-  description: '', 
-  percentage: 0 
-});
+const formData = ref<{
+  status: ProgressStatus
+  description: string
+  percentage: number
+}>({
+  status: 'pending',
+  description: '',
+  percentage: 0,
+})
 
 watch(
-  () => [formData.value.status, formData.value.description, formData.value.percentage],
+  () => [
+    formData.value.status,
+    formData.value.description,
+    formData.value.percentage,
+  ],
   () => {
-    emit('update', formData.value);
+    emit('update', formData.value)
   },
-  { deep: true }
-);
+  { deep: true },
+)
 </script>
 
 <style scoped>

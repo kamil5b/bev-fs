@@ -5,12 +5,12 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    message?: string;
+    message?: string
   }>(),
   {
-    message: 'Loading...'
-  }
-);
+    message: 'Loading...',
+  },
+)
 </script>
 
 <style scoped>

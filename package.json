@@ -6,9 +6,14 @@
     "packages/*"
   ],
   "scripts": {
+    "format": "bunx prettier . --write",
+    "check-format": "bunx prettier . --check",
     "bootstrap": "bun install",
     "publish": "./scripts/publish.sh",
     "dev": "./scripts/testbed-dev.sh",
     "start": "./scripts/testbed-prod.sh"
+  },
+  "dependencies": {
+    "prettier": "^3.7.4"
   }
 }

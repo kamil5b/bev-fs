@@ -1,9 +1,9 @@
 export const createRoute = <T extends string>(path: T) => ({
   path,
-  api(pathSuffix = "") {
-    return `/api${path}${pathSuffix}`;
-  }
-});
+  api(pathSuffix = '') {
+    return `/api${path}${pathSuffix}`
+  },
+})
 
 /**
  * Convert directory-based file path to route path
@@ -13,28 +13,31 @@ export const createRoute = <T extends string>(path: T) => ({
  * - "./router/product/[id]/index.vue" -> "/product/:id"
  * - "./router/product/[id]/progress/index.vue" -> "/product/:id/progress"
  */
-export function convertPathToRoute(filePath: string, prefix = "router"): string {
+export function convertPathToRoute(
+  filePath: string,
+  prefix = 'router',
+): string {
   let routePath = filePath
-    .replace(/^\.?\/?(?:router\/)?/, "") // remove leading ./, router/, ./router/
-    .replace(/\/index\.(vue|ts|js)$/, "") // remove /index.vue/.ts/.js extension
-    .replace(/^index\.(vue|ts|js)$/, "") // remove root index.vue/.ts/.js
-    .replace(/\[(\w+)\]/g, ":$1"); // convert [id] to :id
+    .replace(/^\.?\/?(?:router\/)?/, '') // remove leading ./, router/, ./router/
+    .replace(/\/index\.(vue|ts|js)$/, '') // remove /index.vue/.ts/.js extension
+    .replace(/^index\.(vue|ts|js)$/, '') // remove root index.vue/.ts/.js
+    .replace(/\[(\w+)\]/g, ':$1') // convert [id] to :id
 
   // Ensure route starts with /
   if (!routePath) {
-    routePath = "/";
-  } else if (!routePath.startsWith("/")) {
-    routePath = "/" + routePath;
+    routePath = '/'
+  } else if (!routePath.startsWith('/')) {
+    routePath = '/' + routePath
   }
 
-  return routePath;
+  return routePath
 }
 
 /**
  * Check if a file is an index file (index.ts, index.js, index.vue)
  */
 export function isIndexFile(fileName: string): boolean {
-  return /^index\.(ts|js|vue)$/.test(fileName);
+  return /^index\.(ts|js|vue)$/.test(fileName)
 }
 
 /**
@@ -44,6 +47,5 @@ export function isIndexFile(fileName: string): boolean {
  * - "[id]" -> ":id"
  */
 export function convertDirNameToSegment(dirName: string): string {
-  return dirName.replace(/\[(\w+)\]/g, ":$1");
+  return dirName.replace(/\[(\w+)\]/g, ':$1')
 }
-

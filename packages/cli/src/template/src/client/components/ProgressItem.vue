@@ -2,28 +2,34 @@
   <div class="progress-item">
     <div class="progress-header-item">
       <span class="status" :class="progress.status">{{ progress.status }}</span>
-      <span class="date">{{ new Date(progress.updatedAt).toLocaleDateString() }}</span>
+      <span class="date">{{
+        new Date(progress.updatedAt).toLocaleDateString()
+      }}</span>
     </div>
     <p class="description">{{ progress.description }}</p>
     <p class="percentage">Progress: {{ progress.percentage }}%</p>
     <div class="action-buttons">
-      <button @click="$emit('edit')" class="btn btn-sm btn-primary">Edit</button>
-      <button @click="$emit('delete')" class="btn btn-sm btn-danger">Delete</button>
+      <button @click="$emit('edit')" class="btn btn-sm btn-primary">
+        Edit
+      </button>
+      <button @click="$emit('delete')" class="btn btn-sm btn-danger">
+        Delete
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Progress } from '../../shared';
+import { Progress } from '../../shared'
 
 defineProps<{
-  progress: Progress;
-}>();
+  progress: Progress
+}>()
 
 defineEmits<{
-  edit: [];
-  delete: [];
-}>();
+  edit: []
+  delete: []
+}>()
 </script>
 
 <style scoped>

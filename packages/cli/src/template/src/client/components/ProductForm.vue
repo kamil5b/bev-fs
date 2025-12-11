@@ -1,50 +1,52 @@
 <template>
   <div class="form-group">
-    <input 
-      v-model="formData.name" 
-      type="text" 
+    <input
+      v-model="formData.name"
+      type="text"
       placeholder="Product name"
       @keyup.enter="$emit('submit')"
     />
-    <input 
-      v-model.number="formData.price" 
-      type="number" 
+    <input
+      v-model.number="formData.price"
+      type="number"
       placeholder="Price"
       @keyup.enter="$emit('submit')"
     />
-    <button @click="$emit('submit')" class="btn btn-primary">{{ buttonLabel }}</button>
+    <button @click="$emit('submit')" class="btn btn-primary">
+      {{ buttonLabel }}
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch } from 'vue'
 
 interface Props {
-  initialName?: string;
-  initialPrice?: number;
-  buttonLabel?: string;
+  initialName?: string
+  initialPrice?: number
+  buttonLabel?: string
 }
 
 withDefaults(defineProps<Props>(), {
   initialName: '',
   initialPrice: 0,
-  buttonLabel: 'Submit'
-});
+  buttonLabel: 'Submit',
+})
 
 const emit = defineEmits<{
-  submit: [];
-  update: [data: { name: string; price: number }];
-}>();
+  submit: []
+  update: [data: { name: string; price: number }]
+}>()
 
-const formData = ref({ name: '', price: 0 });
+const formData = ref({ name: '', price: 0 })
 
 watch(
   () => [formData.value.name, formData.value.price],
   () => {
-    emit('update', formData.value);
+    emit('update', formData.value)
   },
-  { deep: true }
-);
+  { deep: true },
+)
 </script>
 
 <style scoped>

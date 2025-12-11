@@ -11,11 +11,11 @@
 </template>
 
 <script setup lang="ts">
-import { Product } from '../../shared';
+import { Product } from '../../shared'
 
 defineProps<{
-  product: Product;
-}>();
+  product: Product
+}>()
 </script>
 
 <style scoped>

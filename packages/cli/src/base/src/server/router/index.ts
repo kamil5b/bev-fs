@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia } from 'elysia'
 
 /**
  * Root API route middleware
@@ -8,23 +8,23 @@ import { Elysia } from "elysia";
 export const middleware = [
   (app: Elysia) => {
     app.derive(({ request }) => {
-      const requestId = crypto.randomUUID();
-      return { requestId };
-    });
+      const requestId = crypto.randomUUID()
+      return { requestId }
+    })
   },
-];
+]
 
 /**
  * GET / - API health check
  */
 export const GET = ({ requestId }: any) => {
   return {
-    message: "Welcome to bev-fs API",
-    version: "0.1.0",
+    message: 'Welcome to bev-fs API',
+    version: '0.1.0',
     timestamp: new Date().toISOString(),
-    requestId
-  };
-};
+    requestId,
+  }
+}
 
 /**
  * POST / - Create something
@@ -32,8 +32,8 @@ export const GET = ({ requestId }: any) => {
 export const POST = ({ body, requestId }: any) => {
   return {
     success: true,
-    message: "POST received",
+    message: 'POST received',
     requestId,
-    body
-  };
-};
+    body,
+  }
+}

@@ -5,6 +5,7 @@ A minimal, framework-driven full-stack starter template using **Bun**, **Elysia*
 This is the **base edition** — a lightweight starting point with just the essentials that leverages the **bev-fs** framework for automatic routing and project structure.
 
 **Want more?** Check out the **full template edition** which includes:
+
 - Pre-built components (ProductTable, Modal, etc.)
 - Complete example app (product management with file uploads)
 - Sample pages and composables
@@ -59,6 +60,7 @@ bun run build
 ```
 
 Generates:
+
 - `dist/client/` — Optimized Vue app
 - `dist/server/` — Bundled Elysia server
 
@@ -88,6 +90,7 @@ src/
 Your file structure **automatically becomes your routes**:
 
 **Server routes:**
+
 ```
 src/server/router/
 ├── index.ts           → GET/POST /
@@ -99,6 +102,7 @@ src/server/router/
 ```
 
 **Client routes:**
+
 ```
 src/client/router/
 ├── index.vue          → /
@@ -127,19 +131,19 @@ Create `src/server/router/hello/index.ts`:
 ```typescript
 // GET /hello
 export const GET = () => {
-  return { 
-    message: "Hello, World!" 
-  };
-};
+  return {
+    message: 'Hello, World!',
+  }
+}
 
 // POST /hello
 export const POST = ({ body }: any) => {
-  return { 
+  return {
     success: true,
-    message: "Hello received",
-    body 
-  };
-};
+    message: 'Hello received',
+    body,
+  }
+}
 ```
 
 The framework automatically discovers this and exposes it at `GET /hello` and `POST /hello`.
@@ -157,9 +161,9 @@ Create `src/client/router/hello/index.vue`:
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref } from 'vue'
 
-const message = ref("Welcome!");
+const message = ref('Welcome!')
 </script>
 ```
 
@@ -185,6 +189,7 @@ VITE_API_URL=http://localhost:3000/api
 ### Vite Config
 
 Customize in `vite.config.ts`:
+
 - Port configuration
 - Proxy setup for API calls
 - Asset optimization

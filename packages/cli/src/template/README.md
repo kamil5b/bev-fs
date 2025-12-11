@@ -52,6 +52,7 @@ bun run build
 ```
 
 This generates:
+
 - `dist/client/` — Optimized Vue app
 - `dist/server/` — Bundled Elysia server
 
@@ -95,6 +96,7 @@ This generates:
 This template follows **clean architecture** principles:
 
 ### Server Flow
+
 ```
 Request
   ↓
@@ -119,6 +121,7 @@ Response
 - **Shared types** — Client and server share the same TypeScript types
 
 ### Client Flow
+
 ```
 User Interaction
   ↓
@@ -151,6 +154,7 @@ cp env.example .env.local
 ### Vite Config
 
 Customize frontend build settings in `vite.config.ts`:
+
 - Port configuration
 - Asset optimization
 - Plugin configuration
@@ -158,6 +162,7 @@ Customize frontend build settings in `vite.config.ts`:
 ### Bun Config
 
 Configure Bun runtime in `bunfig.toml`:
+
 - Module resolution
 - Development server settings
 - Build optimization
@@ -185,18 +190,19 @@ Configure Bun runtime in `bunfig.toml`:
 
 ## 📦 Scripts
 
-| Script | Description |
-|--------|-------------|
-| `bun run dev` | Run server and client concurrently |
-| `bun run dev:server` | Run backend only |
-| `bun run dev:client` | Run frontend dev server only |
-| `bun run build` | Build for production |
-| `bun run build:client` | Build frontend only |
-| `bun run build:server` | Build backend only |
+| Script                 | Description                        |
+| ---------------------- | ---------------------------------- |
+| `bun run dev`          | Run server and client concurrently |
+| `bun run dev:server`   | Run backend only                   |
+| `bun run dev:client`   | Run frontend dev server only       |
+| `bun run build`        | Build for production               |
+| `bun run build:client` | Build frontend only                |
+| `bun run build:server` | Build backend only                 |
 
 ## 🤝 Contributing
 
 This template is designed to be easily extended. Feel free to:
+
 - Add more routes and pages
 - Customize components and styling
 - Implement additional middleware

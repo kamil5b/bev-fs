@@ -1,23 +1,23 @@
-import { Progress } from '../entities/progress.entity';
+import { Progress } from '../entities/progress.entity'
 
 export namespace ProgressResponse {
   export interface GetList {
-    progress: Progress[];
+    progress: Progress[]
   }
 
   export interface GetById {
-    progress: Progress;
+    progress: Progress
   }
 
   export interface Create {
-    created: Progress;
+    created: Progress
   }
 
   export interface Update {
-    updated: Progress;
+    updated: Progress
   }
 
   export interface Delete {
-    deleted: number;
+    deleted: number
   }
 }

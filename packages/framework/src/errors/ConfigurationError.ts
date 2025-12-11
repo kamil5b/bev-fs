@@ -4,9 +4,9 @@
 export class ConfigurationError extends Error {
   constructor(
     public readonly configKey: string,
-    message: string
+    message: string,
   ) {
-    super(message);
-    this.name = "ConfigurationError";
+    super(message)
+    this.name = 'ConfigurationError'
   }
 }

@@ -1,12 +1,12 @@
-import { getCurrentInstance } from 'vue';
+import { getCurrentInstance } from 'vue'
 
 /**
  * Custom composable to get the router instance
  * Works around Vue Router plugin injection issues
  */
 export function useAppRouter() {
-  const instance = getCurrentInstance();
-  return instance?.proxy?.$router;
+  const instance = getCurrentInstance()
+  return instance?.proxy?.$router
 }
 
 /**
@@ -14,6 +14,6 @@ export function useAppRouter() {
  * Works around Vue Router plugin injection issues
  */
 export function useAppRoute() {
-  const instance = getCurrentInstance();
-  return instance?.proxy?.$route;
+  const instance = getCurrentInstance()
+  return instance?.proxy?.$route
 }

@@ -2,20 +2,23 @@
  * File API Response Types
  */
 
-import type { UploadedFile } from '../entities/file.entity';
+import type { UploadedFile } from '../entities/file.entity'
 
 export interface FileUploadResponse {
-  success: true;
-  files: UploadedFile[];
+  success: true
+  files: UploadedFile[]
 }
 
 export interface FileDeleteResponse {
-  success: true;
+  success: true
 }
 
 export interface FileListResponse {
-  success: true;
-  files: UploadedFile[];
+  success: true
+  files: UploadedFile[]
 }
 
-export type FileResponse = FileUploadResponse | FileDeleteResponse | FileListResponse;
+export type FileResponse =
+  | FileUploadResponse
+  | FileDeleteResponse
+  | FileListResponse

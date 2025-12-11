@@ -3,6 +3,7 @@
 A modern, type-safe fullstack framework for building Vue 3 + Elysia applications with zero configuration. Features automatic route discovery, single-port deployment, and end-to-end TypeScript support.
 
 **Published packages:**
+
 - [`bev-fs`](https://www.npmjs.com/package/bev-fs) — runtime framework (v1.0.0+)
 - [`create-bev-fs`](https://www.npmjs.com/package/create-bev-fs) — CLI scaffolding tool (v1.0.0+)
 
@@ -13,16 +14,16 @@ A modern, type-safe fullstack framework for building Vue 3 + Elysia applications
 ⚡ **Zero Configuration** — No route files, no config, just create files  
 🎯 **Single-Port Deployment** — One process serves frontend + backend  
 🔥 **Hot Module Replacement** — Instant feedback during development  
-📦 **Production Ready** — Optimized builds with Vite and Bun  
+📦 **Production Ready** — Optimized builds with Vite and Bun
 
 ## Architecture
 
-* **`packages/framework`** — Core runtime (server, client, shared utilities)
-* **`packages/cli`** — Project scaffolding CLI tool
-* **`packages/cli/src/template`** — Starter template with examples
-* **Single Elysia process** serves both frontend and API on port 3000
-* **Config flexibility** — YAML and .env support with environment injection
-* **Middleware system** — Extensible request/response pipeline
+- **`packages/framework`** — Core runtime (server, client, shared utilities)
+- **`packages/cli`** — Project scaffolding CLI tool
+- **`packages/cli/src/template`** — Starter template with examples
+- **Single Elysia process** serves both frontend and API on port 3000
+- **Config flexibility** — YAML and .env support with environment injection
+- **Middleware system** — Extensible request/response pipeline
 
 ## Quick Start
 
@@ -36,6 +37,7 @@ bun run dev
 ```
 
 Then open:
+
 - **http://localhost:5173** — Vite dev server (hot reload)
 - **http://localhost:3000** — Production server (after build)
 
@@ -81,8 +83,8 @@ mkdir -p src/server/router/users
 ```typescript
 // src/server/router/users/index.ts
 export const GET = () => {
-  return { users: [{ id: 1, name: 'John' }] };
-};
+  return { users: [{ id: 1, name: 'John' }] }
+}
 ```
 
 ✅ API automatically available at `GET /api/users`
@@ -91,12 +93,12 @@ export const GET = () => {
 
 The root `package.json` provides convenient scripts for development and publishing:
 
-| Script | Description |
-|--------|-------------|
-| `bun run bootstrap` | Install all dependencies in workspace |
-| `bun run dev` | Build packages and start testbed with dev servers |
-| `bun run start` | Build packages and start testbed with production server |
-| `bun run publish` | Build both packages and publish to npm |
+| Script              | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `bun run bootstrap` | Install all dependencies in workspace                   |
+| `bun run dev`       | Build packages and start testbed with dev servers       |
+| `bun run start`     | Build packages and start testbed with production server |
+| `bun run publish`   | Build both packages and publish to npm                  |
 
 ### Quick Development
 
@@ -119,6 +121,7 @@ bun run publish
 ```
 
 This runs the `publish.sh` script which:
+
 1. Builds the framework package
 2. Builds the CLI package
 3. Publishes both to npm
@@ -128,6 +131,7 @@ This runs the `publish.sh` script which:
 ### Directory-Based Routing
 
 **Server (API) routes:**
+
 ```
 src/server/router/
 ├── product/
@@ -139,6 +143,7 @@ src/server/router/
 ```
 
 **Client (Page) routes:**
+
 ```
 src/client/router/
 ├── index.vue                 → /
@@ -160,18 +165,18 @@ src/client/router/
 ```typescript
 // src/shared/api.ts — Shared between client and server
 export interface Product {
-  id: number;
-  name: string;
-  price: number;
+  id: number
+  name: string
+  price: number
 }
 
 export namespace ProductAPI {
   export interface CreateRequest {
-    name: string;
-    price: number;
+    name: string
+    price: number
   }
   export interface CreateResponse {
-    created: Product;
+    created: Product
   }
 }
 ```
@@ -179,9 +184,9 @@ export namespace ProductAPI {
 ```typescript
 // src/server/router/product/index.ts
 export const POST = ({ body }: any): ProductAPI.CreateResponse => {
-  const req = body as ProductAPI.CreateRequest;
+  const req = body as ProductAPI.CreateRequest
   // Type-safe request and response
-};
+}
 ```
 
 ```typescript
@@ -215,8 +220,9 @@ server:
 **Precedence:** `config.yaml` > `.env` > defaults
 
 All config values are automatically injected into `process.env` with uppercase keys:
+
 - `server.port` → `process.env.SERVER_PORT`
-- `server.routerDir` → `process.env.SERVER_ROUTER_DIR`  
+- `server.routerDir` → `process.env.SERVER_ROUTER_DIR`
 
 ## Documentation
 
@@ -231,13 +237,13 @@ All config values are automatically injected into `process.env` with uppercase k
 
 ```typescript
 // src/server/router/product/[id]/index.ts
-import { store } from '../../../store';
+import { store } from '../../../store'
 
 export const GET = ({ params }: any) => {
-  const id = parseInt(params.id);
-  const product = store.products.find(p => p.id === id);
-  return { product };
-};
+  const id = parseInt(params.id)
+  const product = store.products.find((p) => p.id === id)
+  return { product }
+}
 ```
 
 ### Building a Dynamic Page
@@ -252,18 +258,18 @@ export const GET = ({ params }: any) => {
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import { productAPI } from '../../../api';
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { productAPI } from '../../../api'
 
-const route = useRoute();
-const product = ref(null);
+const route = useRoute()
+const product = ref(null)
 
 onMounted(async () => {
-  const id = parseInt(route.params.id as string);
-  const response = await productAPI.getById(id);
-  product.value = response.product;
-});
+  const id = parseInt(route.params.id as string)
+  const response = await productAPI.getById(id)
+  product.value = response.product
+})
 </script>
 ```
 
@@ -278,6 +284,7 @@ This is a monorepo containing:
 ### Local Development
 
 **Quick test (recommended):**
+
 ```bash
 # Clone repo
 git clone https://github.com/kamil5b/bev-fs
@@ -291,6 +298,7 @@ bun install
 The `testbed.sh` script builds both packages, creates a test project in `/tmp/bun-testbed`, links the local framework, and starts dev servers.
 
 **Manual workflow:**
+
 ```bash
 # Install dependencies
 bun install
