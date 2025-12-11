@@ -23,7 +23,7 @@ export interface Context {
 export type RouteHandler = (ctx: Context) => unknown | Promise<unknown>
 
 /**
- * Middleware function type
+ * Server-side middleware function type
  */
 export type Middleware = (app: Elysia) => Elysia | Promise<Elysia>
 
@@ -49,3 +49,23 @@ export interface HealthCheckResponse {
   uptime: number
   version?: string
 }
+
+/**
+ * Context object for client-side middleware
+ */
+export interface ClientMiddlewareContext {
+  router?: any
+  route?: any
+  next: () => void | Promise<void>
+  abort: (reason?: string) => void
+  meta?: Record<string, unknown>
+}
+
+/**
+ * Client-side middleware function type
+ */
+export type ClientMiddleware = (
+  ctx: ClientMiddlewareContext,
+) => void | Promise<void>
+
+

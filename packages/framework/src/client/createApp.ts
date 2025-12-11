@@ -1,11 +1,14 @@
 import { createApp as _createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { convertPathToRoute } from '../shared/createRoute'
+import { registerMiddleware } from './useMiddleware'
+import type { ClientMiddleware } from '../shared/types'
 
 export type ClientOptions = {
   routes?: any[] // vue-router routes (manual override)
   routeModules?: Record<string, any> // import.meta.glob result from client
   historyMode?: boolean
+  middleware?: ClientMiddleware[] // client-side middleware
 }
 
 export function createFrameworkApp(
@@ -27,6 +30,11 @@ export function createFrameworkApp(
 
   // ALSO add router as global property as a workaround
   app.config.globalProperties.$router = router
+
+  // Register client-side middleware if provided
+  if (opts.middleware && opts.middleware.length > 0) {
+    registerMiddleware(app, opts.middleware)
+  }
 
   return { app, router }
 }
