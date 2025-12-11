@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [vue()],
   root: 'src/client',
+  publicDir: '../../public',
   build: {
     outDir: '../../dist/client',
     emptyOutDir: true,

@@ -514,6 +514,33 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
 
   // Static file serving (must come before SPA catch-all route)
   if (fs.existsSync(staticDir)) {
+    // Serve public root files (favicon.ico, robots.txt, etc.)
+    app.get('/:file', (c) => {
+      const { file } = c.params
+      // Only serve specific root-level files
+      const allowedRootFiles = ['favicon.ico', 'robots.txt', 'sitemap.xml']
+      if (!allowedRootFiles.includes(file)) {
+        return
+      }
+      
+      const filePath = path.join(staticDir, file)
+      
+      // Security: ensure the file is within staticDir
+      const resolvedPath = path.resolve(filePath)
+      const resolvedDir = path.resolve(staticDir)
+      if (!resolvedPath.startsWith(resolvedDir)) {
+        c.set.status = 404
+        return { error: 'Not Found' }
+      }
+      
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        return Bun.file(filePath)
+      }
+      
+      c.set.status = 404
+      return { error: 'Not Found' }
+    })
+
     // Serve assets with a specific route
     app.get('/assets/*', (c) => {
       const pathname = new URL(c.request.url).pathname
@@ -541,8 +568,14 @@ export async function createFrameworkServer(opts: ServerOptions = {}) {
   app.get('*', (c) => {
     const pathname = new URL(c.request.url).pathname
 
-    // Don't serve index.html for API routes or static assets
-    if (pathname.startsWith('/api/') || pathname.startsWith('/assets/')) {
+    // Don't serve index.html for API routes, static assets, or root files
+    if (
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/assets/') ||
+      ['favicon.ico', 'robots.txt', 'sitemap.xml'].some((f) =>
+        pathname.endsWith(f),
+      )
+    ) {
       c.set.status = 404
       return { error: 'Not Found' }
     }
