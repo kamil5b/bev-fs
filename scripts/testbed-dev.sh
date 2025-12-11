@@ -8,6 +8,13 @@ WORKSPACE_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 FRAMEWORK_PATH="$WORKSPACE_ROOT/packages/framework"
 CLI_PATH="$WORKSPACE_ROOT/packages/cli"
 
+# Detect OS for sed compatibility
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_INPLACE="sed -i ''"
+else
+    SED_INPLACE="sed -i"
+fi
+
 echo "=== Building Framework ==="
 cd "$FRAMEWORK_PATH"
 bun run build
@@ -34,7 +41,11 @@ cd /tmp/bun-testbed
 echo ""
 echo "=== Setting up framework dependency ==="
 echo "Using framework from: $FRAMEWORK_PATH"
-sed -i '' "s|\"bev-fs\": \"[^\"]*\"|\"bev-fs\": \"file:$FRAMEWORK_PATH\"|" package.json
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "s|\"bev-fs\": \"[^\"]*\"|\"bev-fs\": \"file:$FRAMEWORK_PATH\"|" package.json
+else
+    sed -i "s|\"bev-fs\": \"[^\"]*\"|\"bev-fs\": \"file:$FRAMEWORK_PATH\"|" package.json
+fi
 
 echo ""
 echo "=== Installing dependencies ==="
