@@ -89,6 +89,12 @@ async function createProject(name: string, templateType?: string, useTailwind?: 
     } else {
       await setupTailwind(dest);
     }
+  } else if (templateType === "template") {
+    // Remove client-tailwind directory if not using Tailwind for full template
+    const clientTailwindDir = path.join(dest, "src/client-tailwind");
+    if (fs.existsSync(clientTailwindDir)) {
+      fs.rmSync(clientTailwindDir, { recursive: true });
+    }
   }
   
   // Rename dotfiles that npm doesn't package

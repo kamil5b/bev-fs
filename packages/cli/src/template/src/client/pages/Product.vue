@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAppRouter, useAppRoute } from '../composables/useAppRouter';
+import { useAppRouter, useAppRoute } from 'bev-fs';
 import { useProductAPI } from '../composables/useProductAPI';
 import { Product } from '../../shared';
 import PageHeader from '../components/PageHeader.vue';
