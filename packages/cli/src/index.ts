@@ -211,14 +211,18 @@ function updateAppVueImport(clientDir: string, importStatement: string) {
   }
 }
 
+function applyTailwindConfig(projectDir: string) {
+  updatePackageJson(projectDir, { '@tailwindcss/postcss': '*' })
+  createPostCssConfig(projectDir, { '@tailwindcss/postcss': {} })
+  updateViteConfig(projectDir)
+}
+
 async function setupTailwindBase(projectDir: string) {
   console.log(`  🎨 Configuring Tailwind v4...`)
 
   const clientDir = path.join(projectDir, 'src/client')
 
-  updatePackageJson(projectDir, { '@tailwindcss/postcss': '*' })
-  createPostCssConfig(projectDir, { '@tailwindcss/postcss': {} })
-  updateViteConfig(projectDir)
+  applyTailwindConfig(projectDir)
   updateAppVueImport(clientDir, "import './index.css';")
 
   // Create Tailwind CSS file with Tailwind v4 syntax
@@ -251,9 +255,7 @@ async function setupTailwind(projectDir: string) {
     return
   }
 
-  updatePackageJson(projectDir, { '@tailwindcss/postcss': '*' })
-  createPostCssConfig(projectDir, { '@tailwindcss/postcss': {} })
-  updateViteConfig(projectDir)
+  applyTailwindConfig(projectDir)
 
   console.log(`  ✓ Tailwind CSS configured`)
 }
