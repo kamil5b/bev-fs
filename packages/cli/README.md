@@ -77,6 +77,9 @@ When Tailwind CSS is selected during setup, the CLI:
 - Generates `tailwind.config.js` and `postcss.config.js`
 - Creates `index.css` with Tailwind directives
 - Configures your build process for optimal output
+- Automatically consolidates shared client logic (`composables`, `pages`, `router`) from `client-shared/`
+
+The generated project uses the `client-tailwind/` variant with Tailwind-styled components while sharing all business logic with the vanilla CSS variant.
 
 ## Project Structure
 
@@ -85,14 +88,20 @@ After scaffolding, you'll have:
 ```
 my-app/
 ├── src/
-│   ├── client/              # Vue 3 frontend
+│   ├── client/              # Vue 3 frontend (vanilla CSS styling)
+│   │   ├── App.vue          # Vanilla CSS root component
+│   │   └── components/      # Reusable Vue components (styled)
+│   ├── client-shared/       # Shared client logic (auto-merged by CLI)
 │   │   ├── router/          # Directory-based routes
 │   │   ├── components/      # Reusable Vue components
-│   │   ├── composables/     # Vue composables
+│   │   ├── composables/     # Vue composables (business logic)
 │   │   ├── pages/           # Page components
-│   │   ├── App.vue          # Root component
-│   │   ├── main.ts          # Entry point
+│   │   ├── main.ts          # Vue entry point
 │   │   └── index.html       # HTML template
+│   ├── client-tailwind/     # Tailwind CSS variant (if selected)
+│   │   ├── App.vue          # Tailwind root component
+│   │   ├── index.css        # Tailwind configuration
+│   │   └── components/      # Reusable Vue components (Tailwind styled)
 │   ├── server/              # Elysia backend
 │   │   ├── router/          # API endpoints
 │   │   ├── handler/         # Request handlers
@@ -100,7 +109,6 @@ my-app/
 │   │   ├── repository/      # Data access layer
 │   │   ├── middleware.ts    # Express-like middleware
 │   │   └── index.ts         # Server entry
-│   ├── client-tailwind/     # Tailwind variant (full template only)
 │   └── shared/              # Shared types & utilities
 ├── package.json
 ├── tsconfig.json
@@ -109,6 +117,8 @@ my-app/
 ├── .env.example             # Environment template
 └── GUIDE.md                 # Framework documentation
 ```
+
+**Note:** The `client-shared/` directory contains shared logic that is automatically merged into the active client variant (`client/` or `client-tailwind/`) by the CLI during project setup. This eliminates duplication while allowing each styling variant to maintain its own UI components.
 
 ## Getting Started
 
@@ -155,14 +165,34 @@ See `GUIDE.md` in your generated project for framework documentation.
 
 ## Architecture
 
-The CLI uses two base templates:
+The CLI uses a modular, DRY architecture:
 
-- **base/**: Minimal starting point in `packages/cli/src/base/`
-- **template/**: Feature-rich example in `packages/cli/src/template/`
+### Template Structure
 
-Both are compiled and bundled during the CLI build process. The wrapper script (`wrapper.js`) handles the `create-bev-fs` command entry point.
+```
+packages/cli/src/
+├── shared-template/        # Shared configs (tsconfig, vite, bunfig)
+├── base/                   # Minimal starter template
+└── template/               # Full-featured template
+    ├── client-shared/      # Shared client logic (composables, pages, router)
+    ├── client/             # Vanilla CSS styling variant
+    └── client-tailwind/    # Tailwind CSS styling variant
+```
 
-## Building the CLI
+### Key Design Patterns
+
+1. **Shared Configs** — `tsconfig.json`, `vite.config.ts`, and `bunfig-template.toml` are defined once in `shared-template/` and used by both `base/` and `template/` templates.
+
+2. **Shared Client Logic** — Business logic (composables, pages, router, main.ts) is centralized in `client-shared/` to eliminate duplication between styling variants.
+
+3. **Styling Variants** — Each styling variant (`client/` for vanilla CSS, `client-tailwind/` for Tailwind) contains only:
+   - `App.vue` (root component with framework-specific styling)
+   - `components/` (UI components with framework-specific styling)
+   - `index.css` (styling configuration, if needed)
+
+4. **Automatic Consolidation** — When generating a project, the CLI's `consolidateClientResources()` function automatically copies shared logic from `client-shared/` into the active variant, providing a complete working application.
+
+### Build Process
 
 ```bash
 npm run build
@@ -170,9 +200,11 @@ npm run build
 
 This:
 
-1. Compiles TypeScript to `dist/`
-2. Copies template directories to `dist/`
+1. Compiles TypeScript CLI source to `dist/`
+2. Copies template directories (`base/`, `template/`, `shared-template/`) to `dist/`
 3. Prepares distribution for npm publish
+
+The wrapper script (`wrapper.js`) handles the `create-bev-fs` command entry point.
 
 ## Environment Configuration
 

@@ -1,0 +1,20 @@
+[build]
+# JavaScript runtime target
+target = "bun"
+
+[watch]
+# configure watch if needed
+
+[run]
+# Optimization level for runtime
+logLevel = "warn"
+hot = false
+
+[test]
+# Test configuration
+root = "src"
+testTimeout = 5000
+
+[install]
+# Dependency resolution
+peer = true

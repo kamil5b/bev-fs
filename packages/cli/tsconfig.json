@@ -9,5 +9,5 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "src/template"]
+  "exclude": ["node_modules", "dist", "src/template", "src/base", "src/shared-template"]
 }

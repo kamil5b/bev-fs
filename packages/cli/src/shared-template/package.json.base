@@ -1,0 +1,25 @@
+{
+  "type": "module",
+  "scripts": {
+    "dev:server": "bun src/server/index.ts",
+    "dev:client": "vite",
+    "dev": "concurrently \"bun src/server/index.ts\" \"vite\"",
+    "build:client": "vite build",
+    "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs --target=bun",
+    "build": "bun run build:client && bun run build:server",
+    "start": "bun dist/server/index.js"
+  },
+  "dependencies": {
+    "bev-fs": "latest",
+    "elysia": "*",
+    "@elysiajs/static": "*",
+    "vue": "*",
+    "vue-router": "*"
+  },
+  "devDependencies": {
+    "vite": "*",
+    "@vitejs/plugin-vue": "*",
+    "typescript": "*",
+    "concurrently": "*"
+  }
+}

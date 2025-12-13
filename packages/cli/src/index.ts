@@ -5,40 +5,20 @@ import fse from 'fs-extra'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
-import readline from 'readline'
+import {
+  prompt,
+  renameTemplateFiles,
+  updatePackageJson,
+  updateViteConfig,
+  createPostCssConfig,
+  updateAppVueImport,
+  createTailwindCssFile,
+  setupSharedTemplateFiles,
+  consolidateClientResources,
+} from './utils'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-interface PromptOptions {
-  query: string
-  choices: string[]
-}
-
-function prompt(options: PromptOptions): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    })
-
-    console.log(`\n${options.query}`)
-    options.choices.forEach((choice, index) => {
-      console.log(`  ${index + 1}. ${choice}`)
-    })
-
-    rl.question('\nSelect template (enter number): ', (answer) => {
-      rl.close()
-      const selected = parseInt(answer) - 1
-      if (selected >= 0 && selected < options.choices.length) {
-        resolve(options.choices[selected])
-      } else {
-        console.error('Invalid selection')
-        resolve(options.choices[0]) // default to first option
-      }
-    })
-  })
-}
 
 async function createProject(
   name: string,
@@ -96,6 +76,9 @@ async function createProject(
 
   await fse.copy(templateDir, dest)
 
+  // Apply shared template files if available
+  setupSharedTemplateFiles(dest)
+
   // Prompt for Tailwind support if not provided
   if (useTailwind === undefined) {
     const tailwindChoice = await prompt({
@@ -108,11 +91,10 @@ async function createProject(
   // Configure Tailwind if requested
   if (useTailwind) {
     console.log(`🎨 Setting up Tailwind CSS...`)
-    if (templateType === 'base') {
-      await setupTailwindBase(dest)
-    } else {
-      await setupTailwind(dest)
-    }
+    const isFullTemplate = templateType === 'template'
+    await setupTailwind(dest, isFullTemplate)
+    // Consolidate shared resources after Tailwind setup
+    consolidateClientResources(dest)
   } else if (templateType === 'template') {
     // Remove client-tailwind directory if not using Tailwind for full template
     const clientTailwindDir = path.join(dest, 'src/client-tailwind')
@@ -123,18 +105,7 @@ async function createProject(
 
   // Rename dotfiles that npm doesn't package
   console.log(`📝 Configuring project...`)
-  const filesToRename = [
-    { from: 'gitignore', to: '.gitignore' },
-    { from: 'env.example', to: '.env.example' },
-    { from: 'bunfig-template.toml', to: 'bunfig.toml' },
-  ]
-
-  filesToRename.forEach(({ from, to }) => {
-    const src = path.join(dest, from)
-    if (fs.existsSync(src)) {
-      fs.renameSync(src, path.join(dest, to))
-    }
-  })
+  renameTemplateFiles(dest)
 
   // Initialize git repository
   console.log(`🔧 Initializing git repository...`)
@@ -155,105 +126,33 @@ async function createProject(
 }
 
 // Helper functions for DRY refactoring
-function updatePackageJson(projectDir: string, deps: Record<string, string>) {
-  const packageJsonPath = path.join(projectDir, 'package.json')
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
-
-  if (!packageJson.devDependencies) {
-    packageJson.devDependencies = {}
-  }
-
-  Object.assign(packageJson.devDependencies, deps)
-
-  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n')
-}
-
-function updateViteConfig(projectDir: string) {
-  const viteConfigPath = path.join(projectDir, 'vite.config.ts')
-  let viteConfig = fs.readFileSync(viteConfigPath, 'utf-8')
-
-  if (!viteConfig.includes('postcss')) {
-    viteConfig = viteConfig.replace(
-      'export default defineConfig({',
-      `export default defineConfig({
-  css: {
-    postcss: './postcss.config.js',
-  },`,
-    )
-    fs.writeFileSync(viteConfigPath, viteConfig)
-  }
-}
-
-function createPostCssConfig(
+async function setupTailwind(
   projectDir: string,
-  plugins: Record<string, object>,
-) {
-  const postcssConfigContent = `export default {
-  plugins: ${JSON.stringify(plugins, null, 4)},
-}
-`
-  fs.writeFileSync(
-    path.join(projectDir, 'postcss.config.js'),
-    postcssConfigContent,
-  )
-}
-
-function updateAppVueImport(clientDir: string, importStatement: string) {
-  const appVuePath = path.join(clientDir, 'App.vue')
-  let appVueContent = fs.readFileSync(appVuePath, 'utf-8')
-
-  if (!appVueContent.includes('index.css')) {
-    appVueContent = appVueContent.replace(
-      '<script setup lang="ts">\n</script>',
-      `<script setup lang="ts">\n${importStatement}\n</script>`,
-    )
-    fs.writeFileSync(appVuePath, appVueContent)
-  }
-}
-
-async function setupTailwindBase(projectDir: string) {
-  console.log(`  🎨 Configuring Tailwind v4...`)
-
-  const clientDir = path.join(projectDir, 'src/client')
-
-  updatePackageJson(projectDir, { '@tailwindcss/postcss': '*' })
-  createPostCssConfig(projectDir, { '@tailwindcss/postcss': {} })
-  updateViteConfig(projectDir)
-  updateAppVueImport(clientDir, "import './index.css';")
-
-  // Create Tailwind CSS file with Tailwind v4 syntax
-  fs.writeFileSync(
-    path.join(clientDir, 'index.css'),
-    `@import "tailwindcss";\n`,
-  )
-
-  console.log(`  ✓ Tailwind CSS configured`)
-}
-
-async function setupTailwind(projectDir: string) {
+  isFullTemplate: boolean,
+): Promise<void> {
   console.log(`  🎨 Configuring Tailwind v4...`)
 
   const clientDir = path.join(projectDir, 'src/client')
   const clientTailwindDir = path.join(projectDir, 'src/client-tailwind')
 
-  // Remove the default client directory
-  if (fs.existsSync(clientDir)) {
-    fs.rmSync(clientDir, { recursive: true })
-  }
-
-  // Rename client-tailwind to client
-  if (fs.existsSync(clientTailwindDir)) {
+  // For full template, replace client directory with client-tailwind
+  if (isFullTemplate && fs.existsSync(clientTailwindDir)) {
+    if (fs.existsSync(clientDir)) {
+      fs.rmSync(clientDir, { recursive: true })
+    }
     fs.renameSync(clientTailwindDir, clientDir)
-  } else {
-    console.warn(
-      '  ⚠️  client-tailwind directory not found, skipping Tailwind setup',
-    )
-    return
   }
 
+  // Common Tailwind setup for both templates
   updatePackageJson(projectDir, { '@tailwindcss/postcss': '*' })
   createPostCssConfig(projectDir, { '@tailwindcss/postcss': {} })
   updateViteConfig(projectDir)
+
+  // For base template, add CSS import to App.vue
+  if (!isFullTemplate) {
+    updateAppVueImport(clientDir, "import './index.css';")
+    createTailwindCssFile(clientDir)
+  }
 
   console.log(`  ✓ Tailwind CSS configured`)
 }
