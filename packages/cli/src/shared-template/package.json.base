@@ -7,7 +7,10 @@
     "build:client": "vite build",
     "build:server": "bun build src/server/index.ts --outdir dist/server --external:bev-fs --target=bun",
     "build": "bun run build:client && bun run build:server",
-    "start": "bun dist/server/index.js"
+    "start": "bun dist/server/index.js",
+    "test": "bun test ./src/server/__tests__/*.test.ts",
+    "test:watch": "bun test --watch ./src/server/__tests__/*.test.ts",
+    "test:coverage": "bun test --coverage ./src/server/__tests__/*.test.ts"
   },
   "dependencies": {
     "bev-fs": "latest",

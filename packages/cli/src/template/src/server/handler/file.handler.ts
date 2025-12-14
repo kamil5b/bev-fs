@@ -51,7 +51,7 @@ const ALLOWED_MIME_TYPES = [
  * Uses whitelist approach: only allows alphanumeric, dots, hyphens, underscores
  * Prevents hidden files (starting with dot)
  */
-function validateFileName(fileName: string): boolean {
+export function validateFileName(fileName: string): boolean {
   // Whitelist: only alphanumeric, dots, hyphens, underscores
   // Pattern breakdown: [a-zA-Z0-9._-]+ = allowed chars, no leading dot
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(fileName)) {

@@ -12,6 +12,8 @@
     "type-check": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "test:watch": "bun test --watch",
     "lint": "eslint src/ --ext .ts",
     "clean": "rm -rf dist"
   },

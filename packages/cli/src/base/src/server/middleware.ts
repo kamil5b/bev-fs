@@ -34,6 +34,8 @@ export function createLoggingMiddleware() {
       console.log(`✓ ${method} ${pathname} - ${duration}ms (${requestId})`)
       startTimes.delete(requestId as string)
     })
+
+    return app
   }
 }
 
@@ -53,6 +55,8 @@ export function createAuthMiddleware() {
       const token = authHeader.replace('Bearer ', '')
       return { authToken: token }
     })
+
+    return app
   }
 }
 
@@ -77,5 +81,7 @@ export function createValidationMiddleware(schema: Record<string, any>) {
       }
       return { validatedBody: body }
     })
+
+    return app
   }
 }

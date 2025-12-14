@@ -12,3 +12,4 @@ bun.lock
 *.iml
 .history/
 tmp/
+uploads/

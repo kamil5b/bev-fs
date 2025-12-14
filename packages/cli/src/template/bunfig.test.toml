@@ -1,0 +1,8 @@
+// bunfig.toml - Test configuration for Bun
+# Test configuration
+[test]
+# Pattern for test files
+test_patterns = ["**/__tests__/**/*.test.ts", "**/*.test.ts", "**/*.spec.ts"]
+
+# Coverage configuration (optional)
+# coverage = true

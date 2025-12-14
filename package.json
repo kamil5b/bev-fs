@@ -11,7 +11,9 @@
     "bootstrap": "bun install",
     "publish": "./scripts/publish.sh",
     "dev": "./scripts/testbed-dev.sh",
-    "start": "./scripts/testbed-prod.sh"
+    "start": "./scripts/testbed-prod.sh",
+    "test:testbed": "./scripts/testbed-test.sh",
+    "test:framework": "bun test packages/framework/src"
   },
   "dependencies": {
     "prettier": "^3.7.4"

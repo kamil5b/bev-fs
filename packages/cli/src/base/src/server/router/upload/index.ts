@@ -12,12 +12,15 @@ import { Elysia } from 'elysia'
 export const middleware = [
   (app: Elysia) => {
     app.derive(({ body }) => {
-      // Validate that files are provided
-      if (!body || Object.keys(body).length === 0) {
+      // Validate that files are provided - handle null/undefined body
+      const bodyKeys = body && typeof body === 'object' ? Object.keys(body) : []
+      if (bodyKeys.length === 0) {
         throw new Error('No files provided')
       }
-      return { filesCount: Object.keys(body).length }
+      return { filesCount: bodyKeys.length }
     })
+
+    return app
   },
 ]
 
@@ -29,13 +32,15 @@ export const middleware = [
  * curl -F "file=@document.pdf" http://localhost:3000/api/upload
  */
 export const POST = ({ body, requestId, filesCount }: any) => {
-  console.log(`[${requestId}] Files received:`, Object.keys(body))
+  // Handle null/undefined body safely
+  const fileKeys = body && typeof body === 'object' ? Object.keys(body) : []
+  console.log(`[${requestId}] Files received:`, fileKeys)
 
   return {
     success: true,
     message: 'File upload successful',
     requestId,
     filesCount,
-    files: Object.keys(body || {}),
+    files: fileKeys,
   }
 }
