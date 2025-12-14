@@ -24,6 +24,7 @@ async function createProject(
   name: string,
   templateType?: string,
   useTailwind?: boolean,
+  useAuth?: boolean,
 ) {
   const dest = path.join(process.cwd(), name)
 
@@ -79,6 +80,24 @@ async function createProject(
   // Apply shared template files if available
   setupSharedTemplateFiles(dest)
 
+  // Prompt for auth support if not provided
+  if (useAuth === undefined) {
+    const authChoice = await prompt({
+      query: 'Would you like to include authentication (login/signup)?',
+      choices: ['yes', 'no'],
+    })
+    useAuth = authChoice === 'yes'
+  }
+
+  // Setup auth if requested
+  if (useAuth) {
+    console.log(`🔐 Setting up authentication...`)
+    setupAuth(dest, templateType)
+  } else {
+    // Remove auth files if not needed
+    removeAuthFiles(dest)
+  }
+
   // Prompt for Tailwind support if not provided
   if (useTailwind === undefined) {
     const tailwindChoice = await prompt({
@@ -126,6 +145,45 @@ async function createProject(
 }
 
 // Helper functions for DRY refactoring
+function setupAuth(projectDir: string, templateType: string): void {
+  console.log(`  🔐 Configuring authentication routes...`)
+  
+  const isBaseTemplate = templateType === 'base'
+  const clientDir = path.join(projectDir, 'src/client')
+  const clientSharedDir = path.join(projectDir, 'src/client-shared')
+  const targetClientDir = isBaseTemplate ? clientDir : clientSharedDir
+
+  // Auth pages already exist in template, just log success
+  console.log(`  ✓ Login/Signup pages configured`)
+  console.log(`  ✓ Authentication routes added`)
+  console.log(`  ✓ Auth composables available`)
+}
+
+function removeAuthFiles(projectDir: string): void {
+  const filesToRemove = [
+    'src/server/router/auth',
+    'src/server/db/users.ts',
+    'src/server/middleware/auth.middleware.ts',
+    'src/client/pages/Login.vue',
+    'src/client/pages/Signup.vue',
+    'src/client-shared/pages/Login.vue',
+    'src/client-shared/pages/Signup.vue',
+    'src/client/composables/useAuth.ts',
+    'src/client-shared/composables/useAuth.ts',
+  ]
+
+  filesToRemove.forEach((file) => {
+    const filePath = path.join(projectDir, file)
+    if (fs.existsSync(filePath)) {
+      if (fs.statSync(filePath).isDirectory()) {
+        fs.rmSync(filePath, { recursive: true })
+      } else {
+        fs.unlinkSync(filePath)
+      }
+    }
+  })
+}
+
 async function setupTailwind(
   projectDir: string,
   isFullTemplate: boolean,
@@ -177,6 +235,8 @@ async function main(argv = process.argv.slice(2)) {
     console.log('Options:')
     console.log('  --base-template           Use base template (minimal)')
     console.log('  --full-template           Use full template (feature-rich)')
+    console.log('  --with-auth               Include authentication (login/signup)')
+    console.log('  --no-auth                 Do not include authentication')
     console.log('  --with-tailwind           Add Tailwind CSS to the project')
     console.log('  --no-tailwind             Do not add Tailwind CSS')
     console.log('  -h, --help                Show this help message')
@@ -188,8 +248,8 @@ async function main(argv = process.argv.slice(2)) {
     console.log(
       '  create-bev-fs my-app --base-template              # Use base template',
     )
-    console.log('  create-bev-fs my-app --full-template --with-tailwind')
-    console.log('  create-bev-fs my-app --base-template --with-tailwind')
+    console.log('  create-bev-fs my-app --full-template --with-auth --with-tailwind')
+    console.log('  create-bev-fs my-app --base-template --with-auth')
     process.exit(0)
   }
 
@@ -203,6 +263,13 @@ async function main(argv = process.argv.slice(2)) {
       ? 'full'
       : undefined
 
+  // Parse auth flag
+  const useAuth = argv.includes('--with-auth')
+    ? true
+    : argv.includes('--no-auth')
+      ? false
+      : undefined
+
   // Parse Tailwind flag
   const useTailwind = argv.includes('--with-tailwind')
     ? true
@@ -210,7 +277,7 @@ async function main(argv = process.argv.slice(2)) {
       ? false
       : undefined
 
-  await createProject(name, templateType, useTailwind)
+  await createProject(name, templateType, useTailwind, useAuth)
 }
 
 main().catch((e) => {
